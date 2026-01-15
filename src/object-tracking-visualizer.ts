@@ -44,7 +44,6 @@ interface TrackState {
 
 const MAX_POINTS = 16;
 const TRACK_TIMEOUT_MS = 600;
-const DETECTION_SCORE_THRESHOLD = 0.08;
 const MIN_EDGE_PX = 10;
 
 const registeredSignatures: ObjectSignature[] = [
@@ -61,6 +60,7 @@ const state = {
   nextTrackId: 1,
   lastFrame: performance.now(),
   dimensions: { width: 0, height: 0 },
+  matchThreshold: 0.05,
   calibration: {
     active: false,
     signatureId: "",
@@ -79,6 +79,7 @@ const matchesList = document.getElementById("matches-list") as HTMLDivElement;
 const tracksList = document.getElementById("tracks-list") as HTMLDivElement;
 
 const clearButton = document.getElementById("clear-points") as HTMLButtonElement;
+const matchThresholdInput = document.getElementById("match-threshold") as HTMLInputElement;
 const addSigButton = document.getElementById("add-sig") as HTMLButtonElement;
 const sigIdInput = document.getElementById("sig-id") as HTMLInputElement;
 const sigAInput = document.getElementById("sig-a") as HTMLInputElement;
@@ -89,6 +90,10 @@ clearButton.addEventListener("click", () => {
   state.points.clear();
   state.tracks = [];
   state.calibration.active = false;
+});
+
+matchThresholdInput.addEventListener("input", () => {
+  state.matchThreshold = Number(matchThresholdInput.value) / 100;
 });
 
 addSigButton.addEventListener("click", () => {
@@ -319,7 +324,7 @@ function matchSignature(detection: TriangleDetection) {
   let best: { signatureId: string; score: number; scale: number } | undefined;
   for (const signature of registeredSignatures) {
     const { score, scale } = compareSides(detection.sides, signature.sides);
-    if (score <= DETECTION_SCORE_THRESHOLD && (!best || score < best.score)) {
+    if (score <= state.matchThreshold && (!best || score < best.score)) {
       best = { signatureId: signature.id, score, scale };
     }
   }
