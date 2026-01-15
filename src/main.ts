@@ -18,12 +18,9 @@ const ctx = canvas.getContext("2d")!;
 const scoreEl = document.getElementById("score")!;
 const startMenu = document.getElementById("startMenu") as HTMLDialogElement;
 const startGameBtn = document.getElementById("startGame") as HTMLButtonElement;
-const settingsMenu = document.getElementById("settingsMenu") as HTMLDialogElement;
-const calibrateBtn = document.getElementById("calibrateButton") as HTMLButtonElement;
-const calibratedObjectsEl = document.getElementById("calibratedObjects") as HTMLDivElement;
 
 initSettings();
-initCalibrationLifecycle(calibrateBtn, settingsMenu, calibratedObjectsEl);
+initCalibrationLifecycle();
 
 const BOX_WIDTH = 180;
 const BOX_HEIGHT = 130;

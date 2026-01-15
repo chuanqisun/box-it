@@ -24,7 +24,15 @@ export async function loadCalibratedObjects(container: HTMLElement) {
   container.replaceChildren(...items);
 }
 
-export function initCalibrationLifecycle(calibrateBtn: HTMLButtonElement, settingsMenu: HTMLDialogElement, calibratedObjectsEl: HTMLDivElement) {
+export function initCalibrationLifecycle() {
+  const settingsMenu = document.getElementById("settingsMenu") as HTMLDialogElement;
+  const calibrateBtn = document.getElementById("calibrateButton") as HTMLButtonElement;
+  const calibratedObjectsEl = document.getElementById("calibratedObjects") as HTMLDivElement;
+
+  if (!settingsMenu || !calibrateBtn || !calibratedObjectsEl) {
+    return;
+  }
+
   CalibrationElement.define();
 
   settingsMenu.addEventListener("toggle", (e) => {
