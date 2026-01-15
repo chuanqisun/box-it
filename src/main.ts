@@ -1,7 +1,6 @@
-import { BehaviorSubject } from "rxjs";
 import { initSettings } from "./ai/settings";
-import type { GameEntity, GameGlobal, GameWorld } from "./domain";
-import { addEntity, createAnimationFrameDelta$, createResizeObserver$, createWorld, runSystems } from "./engine";
+import type { GameEntity, GameGlobal } from "./domain";
+import { createAnimationFrameDelta$, createResizeObserver$, World } from "./engine";
 import { drawWorld } from "./render";
 import "./style.css";
 import { boxPackingSystem } from "./systems/box-packing";
@@ -29,58 +28,44 @@ const initialGlobal: GameGlobal = {
   canvas: { width: window.innerWidth, height: window.innerHeight },
 };
 
-let world = createWorld<GameEntity, GameGlobal>(initialGlobal);
-
-// Initial Entities
-world = addEntity(world, { feedback: { effects: [] } });
-
-world = addEntity(world, {
-  conveyor: {
-    isActive: false,
-    offset: 0,
-    speed: 250,
-    width: 300,
-    length: window.innerHeight * 0.55,
-  },
-  spawner: { timer: 0, interval: 1000 },
-});
-
-world = addEntity(world, {
-  transform: { x: 0, y: 0, rotation: 0, scale: 1 },
-  collision: { width: BOX_WIDTH, height: BOX_HEIGHT, type: "rectangle" },
-  render: { emoji: "📦" },
-  box: { hasBox: false },
-});
-
-world = addEntity(world, {
-  zone: { type: "restock" },
-  transform: { x: 0, y: 0, rotation: 0, scale: 1 },
-  collision: { width: ZONE_SIZE, height: ZONE_SIZE, type: "rectangle" },
-});
-
-world = addEntity(world, {
-  zone: { type: "shipping" },
-  transform: { x: 0, y: 0, rotation: 0, scale: 1 },
-  collision: { width: ZONE_SIZE, height: ZONE_SIZE, type: "rectangle" },
-});
-
-world = addEntity(world, {
-  pointer: { x: 0, y: 0 },
-});
-
-world = addEntity(world, {
-  score: { value: 600, packedCount: 0 },
-});
-
-const world$ = new BehaviorSubject<GameWorld>(world);
+const world = new World<GameEntity, GameGlobal>(initialGlobal)
+  .addEntity({ feedback: { effects: [] } })
+  .addEntity({
+    conveyor: {
+      isActive: false,
+      offset: 0,
+      speed: 250,
+      width: 300,
+      length: window.innerHeight * 0.55,
+    },
+    spawner: { timer: 0, interval: 1000 },
+  })
+  .addEntity({
+    transform: { x: 0, y: 0, rotation: 0, scale: 1 },
+    collision: { width: BOX_WIDTH, height: BOX_HEIGHT, type: "rectangle" },
+    render: { emoji: "📦" },
+    box: { hasBox: false },
+  })
+  .addEntity({
+    zone: { type: "restock" },
+    transform: { x: 0, y: 0, rotation: 0, scale: 1 },
+    collision: { width: ZONE_SIZE, height: ZONE_SIZE, type: "rectangle" },
+  })
+  .addEntity({
+    zone: { type: "shipping" },
+    transform: { x: 0, y: 0, rotation: 0, scale: 1 },
+    collision: { width: ZONE_SIZE, height: ZONE_SIZE, type: "rectangle" },
+  })
+  .addEntity({
+    pointer: { x: 0, y: 0 },
+  })
+  .addEntity({
+    score: { value: 600, packedCount: 0 },
+  });
 
 // Input streams
 const handleInput = (clientX: number, clientY: number) => {
-  const current = world$.value;
-  world$.next({
-    ...current,
-    entities: current.entities.map((e) => (e.pointer ? { ...e, pointer: { ...e.pointer, x: clientX, y: clientY } } : e)),
-  });
+  world.updateEntities((entities) => entities.map((e) => (e.pointer ? { ...e, pointer: { ...e.pointer, x: clientX, y: clientY } } : e))).next();
 };
 
 canvas.addEventListener("mousemove", (e) => handleInput(e.clientX, e.clientY));
@@ -98,16 +83,16 @@ canvas.addEventListener(
 const systems = [inputSystem, spawningSystem, movementSystem, itemStateSystem, boxPackingSystem, zoneSystem, feedbackSystem];
 
 createAnimationFrameDelta$().subscribe((dt) => {
-  const currentWorld = world$.value;
-  const newWorld = runSystems(currentWorld, dt, systems);
-  world$.next(newWorld);
-  const scoreEntity = newWorld.entities.find((e) => e.score);
+  world.runSystems(dt, systems).next();
+  const scoreEntity = world.entities.find((e) => e.score);
   scoreEl.innerText = String(scoreEntity?.score?.value ?? 0);
-  drawWorld(ctx, newWorld);
+  drawWorld(ctx, { entities: world.entities, nextId: world.nextId, global: world.global });
 });
 
 createResizeObserver$().subscribe(({ width, height }) => {
-  const current = world$.value;
-  const resizedWorld = resizeSystem(current, width, height);
-  world$.next(resizedWorld);
+  const resizedState = resizeSystem({ entities: world.entities, nextId: world.nextId, global: world.global }, width, height);
+  world
+    .updateEntities(() => resizedState.entities)
+    .setGlobal(resizedState.global)
+    .next();
 });

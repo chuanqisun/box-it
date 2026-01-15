@@ -1,9 +1,9 @@
 import type { GameEntity, GameGlobal } from "../domain";
-import type { World } from "../engine";
+import type { WorldState } from "../engine";
 
 const ZONE_SIZE = 200;
 
-export const resizeSystem = (world: World<GameEntity, GameGlobal>, width: number, height: number) => {
+export const resizeSystem = (world: WorldState<GameEntity, GameGlobal>, width: number, height: number) => {
   world.global.canvasEl.width = width;
   world.global.canvasEl.height = height;
 
