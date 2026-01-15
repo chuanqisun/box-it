@@ -38,7 +38,16 @@ It's possible that the points are added/removed in any order, with delays and no
 
 We also have a redundant input mechanism to help debug the program: the user can use mouse to drag objects on the screen and use scroll wheel to rotate the object.
 
-### Object Update Message Contract
+### Object Signature Contract
+
+```ts
+interface ObjectSignature {
+  id: string;
+  sides: [number, number, number]; // lengths of the 3 sides, incrementally sorted
+}
+```
+
+### Object Update Contract
 
 ```ts
 interface ObjectUpdate {
