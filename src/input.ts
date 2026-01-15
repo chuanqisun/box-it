@@ -95,7 +95,7 @@ function computeObjectUpdates(touches: TouchPoint[], objectStates: Map<string, T
         : (assignedTouches.map((touch) => ({ ...touch })) as [TouchPoint, TouchPoint, TouchPoint]);
       hasMatch = true;
     } else if (state.points) {
-      const { points, matchedIds } = updatePointsFromNearbyTouches(state, touches, usedTouchIds);
+      const { points, matchedIds } = updatePointsFromNearbyTouches(state.points, state.signature, touches, usedTouchIds);
       if (matchedIds.size > 0) {
         matchedIds.forEach((id) => usedTouchIds.add(id));
         nextPoints = points;
@@ -208,14 +208,14 @@ function mergeTouchesWithPoints(previous: [TouchPoint, TouchPoint, TouchPoint], 
 }
 
 function updatePointsFromNearbyTouches(
-  state: TrackedObjectState,
+  points: [TouchPoint, TouchPoint, TouchPoint],
+  signature: [number, number, number],
   touches: TouchPoint[],
   usedTouchIds: Set<number>
 ): { points: [TouchPoint, TouchPoint, TouchPoint]; matchedIds: Set<number> } {
-  const points = (state.points ?? []) as [TouchPoint, TouchPoint, TouchPoint];
   const matchedIds = new Set<number>();
   const updated = points.map((point) => ({ ...point })) as [TouchPoint, TouchPoint, TouchPoint];
-  const maxDistance = Math.max(...state.signature) * MATCH_DISTANCE_RATIO;
+  const maxDistance = Math.max(...signature) * MATCH_DISTANCE_RATIO;
   const availableTouches = touches.filter((touch) => !usedTouchIds.has(touch.id));
   const usedIndices = new Set<number>();
 
