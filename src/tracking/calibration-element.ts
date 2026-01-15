@@ -1,6 +1,6 @@
 import { del, set } from "idb-keyval";
 import { html, render } from "lit-html";
-import { Subscription } from "rxjs";
+import { Subscription, distinctUntilChanged, exhaustMap, filter, finalize, map, share, takeUntil, tap, timer } from "rxjs";
 import { getInputRawEvent$ } from "./input";
 
 interface ObjectSignature {
@@ -31,6 +31,7 @@ export class CalibrationElement extends HTMLElement {
   private calibrationStartTime = 0;
   private sidesMeasurements: number[][] = [[], [], []]; // [side1[], side2[], side3[]]
   private subscription?: Subscription;
+  private waitingForClear = false; // waiting for all touches to be removed before next calibration
 
   connectedCallback() {
     this.#clearPreviousResults();
@@ -62,60 +63,85 @@ export class CalibrationElement extends HTMLElement {
   }
 
   #setupInput() {
-    this.subscription = getInputRawEvent$(this.canvas!).subscribe((event) => {
-      event.preventDefault();
+    const input$ = getInputRawEvent$(this.canvas!);
 
-      const rect = this.canvas!.getBoundingClientRect();
+    const touchCount$ = input$.pipe(
+      tap((event) => {
+        event.preventDefault();
 
-      if (event.type === "touchstart" || event.type === "touchmove") {
-        // Update all current touches
-        for (let i = 0; i < event.touches.length; i++) {
-          const touch = event.touches[i];
-          this.touchPoints.set(touch.identifier, {
-            id: touch.identifier,
-            x: touch.clientX - rect.left,
-            y: touch.clientY - rect.top,
-          });
+        const rect = this.canvas!.getBoundingClientRect();
+
+        if (event.type === "touchstart" || event.type === "touchmove") {
+          // Update all current touches
+          for (let i = 0; i < event.touches.length; i++) {
+            const touch = event.touches[i];
+            this.touchPoints.set(touch.identifier, {
+              id: touch.identifier,
+              x: touch.clientX - rect.left,
+              y: touch.clientY - rect.top,
+            });
+          }
+        } else if (event.type === "touchend") {
+          // Remove ended touches
+          for (let i = 0; i < event.changedTouches.length; i++) {
+            const touch = event.changedTouches[i];
+            this.touchPoints.delete(touch.identifier);
+          }
         }
-      } else if (event.type === "touchend") {
-        // Remove ended touches
-        for (let i = 0; i < event.changedTouches.length; i++) {
-          const touch = event.changedTouches[i];
-          this.touchPoints.delete(touch.identifier);
-        }
-      }
 
-      this.#updateCalibrationState();
-    });
+        if (this.isCalibrating && this.touchPoints.size === 3) {
+          this.#recordMeasurement();
+        }
+
+        // Reset waitingForClear when all touches are removed
+        if (this.waitingForClear && this.touchPoints.size === 0) {
+          this.waitingForClear = false;
+        }
+      }),
+      map(() => this.touchPoints.size),
+      distinctUntilChanged(),
+      share()
+    );
+
+    this.subscription = touchCount$
+      .pipe(
+        filter((count) => count === 3 && !this.waitingForClear),
+        exhaustMap(() => {
+          this.#startCalibration();
+
+          const touchCountChanged$ = touchCount$.pipe(filter((count) => count !== 3));
+
+          return timer(2000).pipe(
+            takeUntil(touchCountChanged$),
+            tap(() => {
+              this.waitingForClear = true;
+              this.#finishCalibration();
+            }),
+            finalize(() => {
+              if (this.isCalibrating) {
+                this.isCalibrating = false;
+                this.sidesMeasurements = [[], [], []];
+              }
+            })
+          );
+        })
+      )
+      .subscribe();
   }
 
-  #updateCalibrationState() {
-    const numTouches = this.touchPoints.size;
+  #startCalibration() {
+    this.isCalibrating = true;
+    this.calibrationStartTime = Date.now();
+    this.sidesMeasurements = [[], [], []];
+  }
 
-    if (numTouches === 3 && !this.isCalibrating) {
-      // Start calibration
-      this.isCalibrating = true;
-      this.calibrationStartTime = Date.now();
-      this.sidesMeasurements = [[], [], []];
-    } else if (numTouches === 3 && this.isCalibrating) {
-      // Continue calibration - measure sides
-      const points = Array.from(this.touchPoints.values());
-      const sides = this.#calculateSides(points);
+  #recordMeasurement() {
+    const points = Array.from(this.touchPoints.values());
+    const sides = this.#calculateSides(points);
 
-      this.sidesMeasurements[0].push(sides[0]);
-      this.sidesMeasurements[1].push(sides[1]);
-      this.sidesMeasurements[2].push(sides[2]);
-
-      // Check if 3 seconds have passed
-      const elapsed = Date.now() - this.calibrationStartTime;
-      if (elapsed >= 3000) {
-        this.#finishCalibration();
-      }
-    } else if (numTouches !== 3 && this.isCalibrating) {
-      // Reset calibration if touch count changes
-      this.isCalibrating = false;
-      this.sidesMeasurements = [[], [], []];
-    }
+    this.sidesMeasurements[0].push(sides[0]);
+    this.sidesMeasurements[1].push(sides[1]);
+    this.sidesMeasurements[2].push(sides[2]);
   }
 
   #calculateSides(points: TouchPoint[]): [number, number, number] {
@@ -153,7 +179,6 @@ export class CalibrationElement extends HTMLElement {
 
     // Reset state
     this.isCalibrating = false;
-    this.touchPoints.clear();
     this.sidesMeasurements = [[], [], []];
 
     // Move to next object
@@ -202,7 +227,7 @@ export class CalibrationElement extends HTMLElement {
     // Draw calibration progress
     if (this.isCalibrating) {
       const elapsed = Date.now() - this.calibrationStartTime;
-      const progress = Math.min(elapsed / 3000, 1);
+      const progress = Math.min(elapsed / 2000, 1);
 
       ctx.fillStyle = "#f1c40f";
       ctx.font = "24px sans-serif";
