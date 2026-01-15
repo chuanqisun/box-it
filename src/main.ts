@@ -100,10 +100,14 @@ const handleObjectUpdate = (update: ObjectUpdate) => {
 };
 
 const setupObjectTracking = async () => {
-  const signature = await get<{ id: string; sides: [number, number, number] }>("object-signature-box");
-  if (!signature?.sides) return;
-  const rawEvents$ = getInputRawEvent$(canvas);
-  getObjectEvents(rawEvents$, { knownObjects: [{ id: signature.id, sides: signature.sides }] }).subscribe(handleObjectUpdate);
+  try {
+    const signature = await get<{ id: string; sides: [number, number, number] }>("object-signature-box");
+    if (!signature?.sides) return;
+    const rawEvents$ = getInputRawEvent$(canvas);
+    getObjectEvents(rawEvents$, { knownObjects: [{ id: signature.id, sides: signature.sides }] }).subscribe(handleObjectUpdate);
+  } catch (error) {
+    console.warn("Object tracking unavailable: calibration data could not be loaded.", error);
+  }
 };
 
 setupObjectTracking();

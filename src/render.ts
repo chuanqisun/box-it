@@ -123,7 +123,6 @@ function drawBox(ctx: CanvasRenderingContext2D, world: GameWorld) {
   const box = world.entities.find((e) => e.box);
   if (!box?.transform || !box?.collision) return;
 
-  ctx.save();
   const centerX = box.transform.x + box.collision.width / 2;
   const centerY = box.transform.y + box.collision.height / 2;
   const halfWidth = box.collision.width / 2;
@@ -132,13 +131,14 @@ function drawBox(ctx: CanvasRenderingContext2D, world: GameWorld) {
   const left = -halfWidth;
   const top = -halfHeight;
 
-  ctx.translate(centerX, centerY);
-  ctx.rotate(box.transform.rotation);
-
   ctx.fillStyle = "rgba(0,0,0,0.5)";
   ctx.beginPath();
-  ctx.ellipse(left + halfWidth + BOX_SHADOW_OFFSET, top + box.collision.height + BOX_SHADOW_OFFSET, halfWidth, BOX_SHADOW_HEIGHT, 0, 0, Math.PI * 2);
+  ctx.ellipse(centerX + BOX_SHADOW_OFFSET, centerY + halfHeight + BOX_SHADOW_OFFSET, halfWidth, BOX_SHADOW_HEIGHT, 0, 0, Math.PI * 2);
   ctx.fill();
+
+  ctx.save();
+  ctx.translate(centerX, centerY);
+  ctx.rotate(box.transform.rotation);
 
   ctx.fillStyle = BOX_COLOR;
   ctx.fillRect(left, top, box.collision.width, box.collision.height);
