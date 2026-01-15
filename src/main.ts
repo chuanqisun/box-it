@@ -1,4 +1,5 @@
 import { initSettings } from "./ai/settings";
+import { initCalibrationLifecycle } from "./calibration/calibration";
 import type { GameEntity, GameGlobal } from "./domain";
 import { createAnimationFrameDelta$, createResizeObserver$, World } from "./engine";
 import { drawWorld } from "./render";
@@ -17,8 +18,12 @@ const ctx = canvas.getContext("2d")!;
 const scoreEl = document.getElementById("score")!;
 const startMenu = document.getElementById("startMenu") as HTMLDialogElement;
 const startGameBtn = document.getElementById("startGame") as HTMLButtonElement;
+const settingsMenu = document.getElementById("settingsMenu") as HTMLDialogElement;
+const calibrateBtn = document.getElementById("calibrateButton") as HTMLButtonElement;
+const calibratedObjectsEl = document.getElementById("calibratedObjects") as HTMLDivElement;
 
 initSettings();
+initCalibrationLifecycle(calibrateBtn, settingsMenu, calibratedObjectsEl);
 
 const BOX_WIDTH = 180;
 const BOX_HEIGHT = 130;

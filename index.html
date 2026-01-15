@@ -40,12 +40,21 @@
         <button class="dialog-close" commandfor="settingsMenu" command="close" aria-label="Close settings">✕</button>
       </div>
       <div class="dialog-body">
-        <label for="apiKeyInput">Google AI Studio API Key</label>
-        <input id="apiKeyInput" type="password" placeholder="Paste API key" autocomplete="off" spellcheck="false" />
-      </div>
-      <div class="dialog-footer">
-        <button id="clearApiKey" class="btn btn-danger">Clear</button>
-        <button id="saveApiKey" class="btn btn-primary">Save</button>
+        <div class="settings-section">
+          <label for="apiKeyInput">Google AI Studio API Key</label>
+          <input id="apiKeyInput" type="password" placeholder="Paste API key" autocomplete="off" spellcheck="false" />
+          <div class="settings-section-footer">
+            <button id="clearApiKey" class="btn btn-danger">Clear</button>
+            <button id="saveApiKey" class="btn btn-primary">Save</button>
+          </div>
+        </div>
+        <div class="settings-divider"></div>
+        <div class="settings-section">
+          <label>Object Calibration</label>
+          <p class="settings-description">Calibrate physical objects for touch recognition.</p>
+          <div id="calibratedObjects" class="calibrated-objects-list"></div>
+          <button id="calibrateButton" class="btn btn-secondary">Start Calibration</button>
+        </div>
       </div>
     </dialog>
     <script type="module" src="/src/main.ts"></script>
