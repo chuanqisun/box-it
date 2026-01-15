@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Box-It ECS Prototype</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: #f4f5f7;
+      }
+      body {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+      }
+      canvas {
+        border-radius: 12px;
+        border: 1px solid #cfd4db;
+        background: #ffffff;
+        box-shadow: 0 12px 24px rgba(17, 24, 39, 0.12);
+      }
+      .hud {
+        width: min(960px, 95vw);
+        display: flex;
+        justify-content: space-between;
+        font-size: 14px;
+        color: #374151;
+      }
+      .hud strong {
+        color: #111827;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="hud">
+      <div>
+        <strong>Mouse:</strong> drag box · <strong>Wheel:</strong> rotate box
+      </div>
+      <div id="score">Packed: 0</div>
+    </div>
+    <canvas id="world" width="960" height="540"></canvas>
+    <script>
+      const canvas = document.getElementById("world");
+      const ctx = canvas.getContext("2d");
+      const scoreLabel = document.getElementById("score");
+
+      const world = {
+        entities: new Set(),
+        nextId: 1,
+        components: {
+          transform: new Map(),
+          renderable: new Map(),
+          draggable: new Map(),
+          conveyor: new Map(),
+          beltItem: new Map(),
+          box: new Map(),
+        },
+        createEntity() {
+          const id = this.nextId++;
+          this.entities.add(id);
+          return id;
+        },
+        add(entity, type, data) {
+          this.components[type].set(entity, data);
+        },
+        get(entity, type) {
+          return this.components[type].get(entity);
+        },
+      };
+
+      const config = {
+        belt: {
+          x: 160,
+          yStart: 60,
+          yEnd: 250,
+          width: 200,
+          height: 36,
+        },
+        dropY: 450,
+        floorY: 500,
+      };
+      const ROTATION_SPEED = 0.1;
+      const BOX_PADDING = 20;
+      const MAX_FRAME_TIME = 0.05;
+
+      const boxEntity = world.createEntity();
+      world.add(boxEntity, "transform", { x: 650, y: 380, rotation: 0 });
+      world.add(boxEntity, "renderable", {
+        width: 180,
+        height: 120,
+        fill: "#f9d7a0",
+        stroke: "#c58b47",
+      });
+      world.add(boxEntity, "draggable", {});
+      world.add(boxEntity, "box", { stored: 0, capacity: 6 });
+
+      const itemEntity = world.createEntity();
+      world.add(itemEntity, "transform", { x: config.belt.x, y: config.belt.yStart, rotation: 0 });
+      world.add(itemEntity, "renderable", {
+        width: 40,
+        height: 26,
+        fill: "#8bb4ff",
+        stroke: "#2f5aa8",
+      });
+      world.add(itemEntity, "conveyor", { speed: 120 });
+      world.add(itemEntity, "beltItem", { state: "onBelt", resetDelay: 0 });
+
+      const inputState = {
+        activeEntity: null,
+        dragOffset: { x: 0, y: 0 },
+      };
+
+      function getMousePosition(event) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+          x: ((event.clientX - rect.left) / rect.width) * canvas.width,
+          y: ((event.clientY - rect.top) / rect.height) * canvas.height,
+        };
+      }
+
+      function pointInRotatedRect(point, transform, renderable) {
+        const cos = Math.cos(transform.rotation);
+        const sin = Math.sin(transform.rotation);
+        const dx = point.x - transform.x;
+        const dy = point.y - transform.y;
+        const localX = dx * cos + dy * sin;
+        const localY = -dx * sin + dy * cos;
+        return (
+          Math.abs(localX) <= renderable.width / 2 &&
+          Math.abs(localY) <= renderable.height / 2
+        );
+      }
+
+      canvas.addEventListener("mousedown", (event) => {
+        const position = getMousePosition(event);
+        for (const entity of world.components.draggable.keys()) {
+          const transform = world.get(entity, "transform");
+          const renderable = world.get(entity, "renderable");
+          if (pointInRotatedRect(position, transform, renderable)) {
+            inputState.activeEntity = entity;
+            inputState.dragOffset.x = transform.x - position.x;
+            inputState.dragOffset.y = transform.y - position.y;
+            break;
+          }
+        }
+      });
+
+      canvas.addEventListener("mousemove", (event) => {
+        if (!inputState.activeEntity) return;
+        const position = getMousePosition(event);
+        const transform = world.get(inputState.activeEntity, "transform");
+        transform.x = position.x + inputState.dragOffset.x;
+        transform.y = position.y + inputState.dragOffset.y;
+      });
+
+      canvas.addEventListener("mouseup", () => {
+        inputState.activeEntity = null;
+      });
+
+      canvas.addEventListener("mouseleave", () => {
+        inputState.activeEntity = null;
+      });
+
+      canvas.addEventListener("wheel", (event) => {
+        const targetEntity = inputState.activeEntity ?? boxEntity;
+        const transform = world.get(targetEntity, "transform");
+        transform.rotation += (event.deltaY > 0 ? 1 : -1) * ROTATION_SPEED;
+        event.preventDefault();
+      });
+
+      function conveyorSystem(dt) {
+        for (const [entity, beltItem] of world.components.beltItem.entries()) {
+          const transform = world.get(entity, "transform");
+          const conveyor = world.get(entity, "conveyor");
+          if (beltItem.resetDelay > 0) {
+            beltItem.resetDelay -= dt;
+            if (beltItem.resetDelay <= 0) {
+              beltItem.state = "onBelt";
+              transform.x = config.belt.x;
+              transform.y = config.belt.yStart;
+            }
+            continue;
+          }
+          if (beltItem.state === "onBelt") {
+            transform.y += conveyor.speed * dt;
+            if (transform.y >= config.belt.yEnd) {
+              beltItem.state = "falling";
+            }
+          } else if (beltItem.state === "falling") {
+            transform.y += conveyor.speed * dt;
+            const box = world.get(boxEntity, "box");
+            if (itemInsideBox(transform, world.get(boxEntity, "transform"), world.get(boxEntity, "renderable"))) {
+              beltItem.state = "packed";
+              box.stored = Math.min(box.stored + 1, box.capacity);
+              beltItem.resetDelay = 1.2;
+              transform.y = -100;
+              scoreLabel.textContent = `Packed: ${box.stored}`;
+            } else if (transform.y >= config.floorY) {
+              beltItem.state = "missed";
+              beltItem.resetDelay = 1.0;
+              transform.y = -100;
+            }
+          }
+        }
+      }
+
+      function itemInsideBox(itemTransform, boxTransform, boxRenderable) {
+        return pointInRotatedRect(
+          { x: itemTransform.x, y: itemTransform.y },
+          boxTransform,
+          {
+            width: boxRenderable.width - BOX_PADDING,
+            height: boxRenderable.height - BOX_PADDING,
+          }
+        );
+      }
+
+      function renderSystem() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBelt();
+        drawZones();
+        for (const entity of world.entities) {
+          const transform = world.get(entity, "transform");
+          const renderable = world.get(entity, "renderable");
+          if (!transform || !renderable) continue;
+          ctx.save();
+          ctx.translate(transform.x, transform.y);
+          ctx.rotate(transform.rotation);
+          ctx.fillStyle = renderable.fill;
+          ctx.strokeStyle = renderable.stroke;
+          ctx.lineWidth = 2;
+          ctx.fillRect(-renderable.width / 2, -renderable.height / 2, renderable.width, renderable.height);
+          ctx.strokeRect(-renderable.width / 2, -renderable.height / 2, renderable.width, renderable.height);
+          ctx.restore();
+        }
+      }
+
+      function drawBelt() {
+        ctx.fillStyle = "#d1d5db";
+        ctx.fillRect(config.belt.x - config.belt.width / 2, config.belt.yStart - 18, config.belt.width, 18);
+        ctx.fillStyle = "#9ca3af";
+        ctx.fillRect(config.belt.x - config.belt.width / 2, config.belt.yStart, config.belt.width, config.belt.yEnd - config.belt.yStart);
+        ctx.fillStyle = "#6b7280";
+        for (let y = config.belt.yStart; y <= config.belt.yEnd; y += 24) {
+          ctx.fillRect(config.belt.x - config.belt.width / 2, y, config.belt.width, 4);
+        }
+      }
+
+      function drawZones() {
+        ctx.strokeStyle = "#94a3b8";
+        ctx.setLineDash([6, 6]);
+        ctx.strokeRect(520, 300, 360, 190);
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#475569";
+        ctx.font = "14px sans-serif";
+        ctx.fillText("Packing Zone", 530, 320);
+      }
+
+      let lastTime = performance.now();
+      function loop(now) {
+        const dt = Math.min((now - lastTime) / 1000, MAX_FRAME_TIME);
+        lastTime = now;
+        conveyorSystem(dt);
+        renderSystem();
+        requestAnimationFrame(loop);
+      }
+
+      requestAnimationFrame(loop);
+    </script>
+  </body>
+</html>
