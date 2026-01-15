@@ -82,6 +82,16 @@ canvas {
   backdrop-filter: blur(2px);
 }
 
+.settings-dialog h2 {
+  margin: 0;
+}
+
+.dialog-body p {
+  margin-top: 10px;
+  line-height: 1.5;
+  color: #ccc;
+}
+
 .dialog-header {
   display: flex;
   align-items: center;

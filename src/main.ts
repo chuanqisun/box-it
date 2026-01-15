@@ -15,6 +15,8 @@ import { zoneSystem } from "./systems/zone";
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
 const scoreEl = document.getElementById("score")!;
+const startMenu = document.getElementById("startMenu") as HTMLDialogElement;
+const startGameBtn = document.getElementById("startGame") as HTMLButtonElement;
 
 initSettings();
 
@@ -82,11 +84,16 @@ canvas.addEventListener(
 // Game Loop
 const systems = [inputSystem, spawningSystem, movementSystem, itemStateSystem, boxPackingSystem, zoneSystem, feedbackSystem];
 
-createAnimationFrameDelta$().subscribe((dt) => {
-  world.runSystems(dt, systems).next();
-  const scoreEntity = world.entities.find((e) => e.score);
-  scoreEl.innerText = String(scoreEntity?.score?.value ?? 0);
-  drawWorld(ctx, world);
+startMenu.showModal();
+
+startGameBtn.addEventListener("click", () => {
+  startMenu.close();
+  createAnimationFrameDelta$().subscribe((dt) => {
+    world.runSystems(dt, systems).next();
+    const scoreEntity = world.entities.find((e) => e.score);
+    scoreEl.innerText = String(scoreEntity?.score?.value ?? 0);
+    drawWorld(ctx, world);
+  });
 });
 
 createResizeObserver$().subscribe(({ width, height }) => {
