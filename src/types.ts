@@ -36,3 +36,35 @@ export interface WithScore {
     value: number;
   };
 }
+
+export interface WithItemState {
+  itemState: {
+    state: "belt" | "falling" | "packed";
+    fallScale: number;
+  };
+}
+
+export interface WithZone {
+  zone: {
+    type: "restock" | "shipping";
+  };
+}
+
+export interface WithBoxAnchor {
+  boxAnchor: {
+    relX: number;
+    relY: number;
+  };
+}
+
+export interface WithQuality {
+  quality: {
+    isBad: boolean;
+  };
+}
+
+export interface WithPhysical {
+  physical: {
+    size: number;
+  };
+}

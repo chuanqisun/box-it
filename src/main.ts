@@ -1,22 +1,25 @@
 import "./style.css";
-import type { WithCollision, WithRender, WithScore, WithTransform, WithVelocity } from "./types";
+import type {
+  WithBoxAnchor,
+  WithCollision,
+  WithItemState,
+  WithPhysical,
+  WithQuality,
+  WithRender,
+  WithScore,
+  WithTransform,
+  WithVelocity,
+  WithZone,
+} from "./types";
 
-type ComponentKey = "transform" | "velocity" | "render" | "collision" | "score";
+type ComponentKey = "transform" | "velocity" | "render" | "collision" | "score" | "itemState" | "zone" | "boxAnchor" | "quality" | "physical";
 
 type EntityKind = "item" | "box" | "packed-item" | "zone";
 
 type Entity = {
   id: number;
   kind: EntityKind;
-  state?: "belt" | "falling" | "packed";
-  zoneType?: "restock" | "shipping";
-  relX?: number;
-  relY?: number;
-  fallScale?: number;
-  isBad?: boolean;
-  rotation?: number;
-  size?: number;
-} & Partial<WithTransform & WithVelocity & WithRender & WithCollision & WithScore>;
+} & Partial<WithTransform & WithVelocity & WithRender & WithCollision & WithScore & WithItemState & WithZone & WithBoxAnchor & WithQuality & WithPhysical>;
 
 type World = {
   entities: Entity[];
@@ -100,13 +103,13 @@ const boxEntity = createEntity("box", {
 });
 
 createEntity("zone", {
-  zoneType: "restock",
+  zone: { type: "restock" },
   transform: { x: 0, y: 0, rotation: 0, scale: 1 },
   collision: { width: ZONE_SIZE, height: ZONE_SIZE, type: "rectangle" },
 });
 
 createEntity("zone", {
-  zoneType: "shipping",
+  zone: { type: "shipping" },
   transform: { x: 0, y: 0, rotation: 0, scale: 1 },
   collision: { width: ZONE_SIZE, height: ZONE_SIZE, type: "rectangle" },
 });
@@ -131,15 +134,15 @@ function resize() {
   }
 
   zoneEntities().forEach((zone) => {
-    if (!zone.transform || !zone.collision) return;
+    if (!zone.transform || !zone.collision || !zone.zone) return;
     zone.collision.width = ZONE_SIZE;
     zone.collision.height = ZONE_SIZE;
 
-    if (zone.zoneType === "restock") {
+    if (zone.zone.type === "restock") {
       zone.transform.x = 0;
       zone.transform.y = canvas.height - ZONE_SIZE;
     }
-    if (zone.zoneType === "shipping") {
+    if (zone.zone.type === "shipping") {
       zone.transform.x = canvas.width - ZONE_SIZE;
       zone.transform.y = canvas.height - ZONE_SIZE;
     }
@@ -190,14 +193,12 @@ function spawnItem() {
   const x = beltLeft + padding + Math.random() * (CONVEYOR_WIDTH - padding * 2);
 
   createEntity("item", {
-    transform: { x, y: -60, rotation: 0, scale: 1 },
+    transform: { x, y: -60, rotation: (Math.random() - 0.5) * 0.5, scale: 1 },
     velocity: { x: 0, y: ITEM_SPEED_BELT },
     render: { emoji },
     collision: { width: ITEM_SIZE, height: ITEM_SIZE, type: "rectangle" },
-    state: "belt",
-    fallScale: 1,
-    rotation: (Math.random() - 0.5) * 0.5,
-    size: ITEM_SIZE,
+    itemState: { state: "belt", fallScale: 1 },
+    physical: { size: ITEM_SIZE },
   });
 
   world.spawnInterval = Math.random() * 800 + 600;
@@ -222,16 +223,16 @@ function updateMovement(deltaTime: number) {
 
 function updateItemStates(deltaTime: number) {
   itemEntities().forEach((item) => {
-    if (!item.transform || !item.velocity) return;
+    if (!item.transform || !item.velocity || !item.itemState) return;
 
-    if (item.state === "belt" && item.transform.y > CONVEYOR_LENGTH) {
-      item.state = "falling";
+    if (item.itemState.state === "belt" && item.transform.y > CONVEYOR_LENGTH) {
+      item.itemState.state = "falling";
       item.velocity.y = ITEM_SPEED_FALL;
     }
 
-    if (item.state === "falling" && typeof item.fallScale === "number") {
-      if (item.fallScale > 0.7) {
-        item.fallScale -= (deltaTime / 1000) * 0.5;
+    if (item.itemState.state === "falling") {
+      if (item.itemState.fallScale > 0.7) {
+        item.itemState.fallScale -= (deltaTime / 1000) * 0.5;
       }
     }
 
@@ -255,17 +256,17 @@ function checkZones() {
   if (!box?.transform || !box?.collision) return;
 
   zoneEntities().forEach((zone) => {
-    if (!zone.transform || !zone.collision) return;
+    if (!zone.transform || !zone.collision || !zone.zone) return;
     const inZone =
       world.mouseX >= zone.transform.x &&
       world.mouseX <= zone.transform.x + zone.collision.width &&
       world.mouseY >= zone.transform.y &&
       world.mouseY <= zone.transform.y + zone.collision.height;
 
-    if (zone.zoneType === "shipping" && world.hasBox && inZone) {
+    if (zone.zone.type === "shipping" && world.hasBox && inZone) {
       shipBox();
     }
-    if (zone.zoneType === "restock" && !world.hasBox && inZone) {
+    if (zone.zone.type === "restock" && !world.hasBox && inZone) {
       buyBox();
     }
   });
@@ -277,9 +278,9 @@ function handlePacking() {
   if (!box?.transform || !box?.collision) return;
 
   for (const item of itemEntities()) {
-    if (!item.transform || item.state !== "falling") continue;
+    if (!item.transform || !item.itemState || item.itemState.state !== "falling") continue;
     const itemCenterX = item.transform.x;
-    const itemCenterY = item.transform.y + (item.size ?? ITEM_SIZE) / 2;
+    const itemCenterY = item.transform.y + (item.physical?.size ?? ITEM_SIZE) / 2;
 
     const hitY = itemCenterY >= box.transform.y + 10 && itemCenterY <= box.transform.y + box.collision.height - 10;
     const hitX = itemCenterX >= box.transform.x + 10 && itemCenterX <= box.transform.x + box.collision.width - 10;
@@ -292,9 +293,9 @@ function handlePacking() {
     let overlap = false;
     const safeDistance = ITEM_SIZE * 0.7;
     for (const packed of packedEntities()) {
-      if (packed.relX == null || packed.relY == null) continue;
-      const dx = packed.relX - relX;
-      const dy = packed.relY - relY;
+      if (!packed.boxAnchor) continue;
+      const dx = packed.boxAnchor.relX - relX;
+      const dy = packed.boxAnchor.relY - relY;
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist < safeDistance) {
         overlap = true;
@@ -307,15 +308,13 @@ function handlePacking() {
     }
 
     createEntity("packed-item", {
-      transform: { x: relX, y: relY, rotation: 0, scale: 0 },
+      transform: { x: relX, y: relY, rotation: (Math.random() - 0.5) * 1.0, scale: 0 },
       render: { emoji: item.render?.emoji ?? "📦" },
       collision: { width: ITEM_SIZE, height: ITEM_SIZE, type: "rectangle" },
-      relX,
-      relY,
-      rotation: (Math.random() - 0.5) * 1.0,
-      fallScale: item.fallScale ?? 1,
-      isBad: overlap,
-      state: "packed",
+      boxAnchor: { relX, relY },
+      itemState: { state: "packed", fallScale: item.itemState.fallScale },
+      quality: { isBad: overlap },
+      physical: { size: ITEM_SIZE },
     });
 
     removeEntity(item.id);
@@ -324,8 +323,8 @@ function handlePacking() {
 
 function updatePackedScaling() {
   packedEntities().forEach((packed) => {
-    if (!packed.transform) return;
-    const targetScale = packed.fallScale ?? 1;
+    if (!packed.transform || !packed.itemState) return;
+    const targetScale = packed.itemState.fallScale;
     if (packed.transform.scale < targetScale) {
       packed.transform.scale += 0.15;
     }
@@ -338,7 +337,7 @@ function shipBox() {
 
   let boxValue = 0;
   packed.forEach((entity) => {
-    if (!entity.isBad) {
+    if (entity.quality && !entity.quality.isBad) {
       boxValue += 100;
     } else {
       boxValue -= 10;
@@ -374,9 +373,9 @@ function buyBox() {
 
 function drawZones() {
   zoneEntities().forEach((zone) => {
-    if (!zone.transform || !zone.collision) return;
+    if (!zone.transform || !zone.collision || !zone.zone) return;
 
-    if (zone.zoneType === "restock") {
+    if (zone.zone.type === "restock") {
       ctx.fillStyle = "rgba(52, 152, 219, 0.2)";
       ctx.fillRect(zone.transform.x, zone.transform.y, zone.collision.width, zone.collision.height);
       ctx.strokeStyle = "#3498db";
@@ -401,7 +400,7 @@ function drawZones() {
       ctx.restore();
     }
 
-    if (zone.zoneType === "shipping") {
+    if (zone.zone.type === "shipping") {
       ctx.fillStyle = "rgba(46, 204, 113, 0.2)";
       ctx.fillRect(zone.transform.x, zone.transform.y, zone.collision.width, zone.collision.height);
       ctx.strokeStyle = "#2ecc71";
@@ -450,13 +449,13 @@ function drawBox() {
   ctx.clip();
 
   packedEntities().forEach((packed) => {
-    if (!packed.transform) return;
+    if (!packed.transform || !packed.boxAnchor) return;
     ctx.save();
-    ctx.translate(box.transform!.x + (packed.relX ?? 0), box.transform!.y + (packed.relY ?? 0));
-    ctx.rotate(packed.rotation ?? 0);
+    ctx.translate(box.transform!.x + packed.boxAnchor.relX, box.transform!.y + packed.boxAnchor.relY);
+    ctx.rotate(packed.transform.rotation);
     ctx.scale(packed.transform.scale, packed.transform.scale);
 
-    if (packed.isBad) {
+    if (packed.quality?.isBad) {
       ctx.shadowColor = "red";
       ctx.shadowBlur = 15;
     } else {
@@ -470,7 +469,7 @@ function drawBox() {
     ctx.textBaseline = "middle";
     ctx.fillText(packed.render?.emoji ?? "📦", 0, 0);
 
-    if (packed.isBad) {
+    if (packed.quality?.isBad) {
       ctx.fillStyle = "rgba(255,0,0,0.8)";
       ctx.font = "bold 24px Arial";
       ctx.fillText("❌", 0, 0);
@@ -541,26 +540,26 @@ function drawItem(item: Entity) {
   if (!item.transform) return;
   ctx.save();
   ctx.translate(item.transform.x, item.transform.y);
-  ctx.rotate(item.rotation ?? 0);
+  ctx.rotate(item.transform.rotation);
 
-  const scale = item.state === "falling" ? item.fallScale ?? 1 : 1;
+  const scale = item.itemState?.state === "falling" ? item.itemState.fallScale : 1;
   ctx.scale(scale, scale);
 
   let shadowY = 5;
   let shadowBlur = 5;
   let shadowAlpha = 0.3;
 
-  if (item.state === "falling") {
-    shadowY = 15 + (1 - (item.fallScale ?? 1)) * 50;
+  if (item.itemState?.state === "falling") {
+    shadowY = 15 + (1 - item.itemState.fallScale) * 50;
     shadowBlur = 10;
-    shadowAlpha = 0.3 * (item.fallScale ?? 1);
+    shadowAlpha = 0.3 * item.itemState.fallScale;
   }
 
   ctx.shadowColor = `rgba(0,0,0,${shadowAlpha})`;
   ctx.shadowBlur = shadowBlur;
   ctx.shadowOffsetY = shadowY;
 
-  ctx.font = `${item.size ?? ITEM_SIZE}px Arial`;
+  ctx.font = `${item.physical?.size ?? ITEM_SIZE}px Arial`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(item.render?.emoji ?? "📦", 0, 0);
@@ -599,7 +598,7 @@ function draw() {
   }
 
   itemEntities().forEach((item) => {
-    if (item.state === "falling") drawItem(item);
+    if (item.itemState?.state === "falling") drawItem(item);
   });
 
   drawConveyor();
@@ -610,7 +609,7 @@ function draw() {
   ctx.rect(beltX, -100, CONVEYOR_WIDTH, CONVEYOR_LENGTH + 100);
   ctx.clip();
   itemEntities().forEach((item) => {
-    if (item.state === "belt") drawItem(item);
+    if (item.itemState?.state === "belt") drawItem(item);
   });
   ctx.restore();
 
