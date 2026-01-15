@@ -138,11 +138,7 @@ function updateCalibration(now: number) {
       state.calibration.measurements = [[], [], []];
     }
 
-    const sides = sortSides([
-      distance(points[0], points[1]),
-      distance(points[1], points[2]),
-      distance(points[2], points[0]),
-    ]);
+    const sides = sortSides([distance(points[0], points[1]), distance(points[1], points[2]), distance(points[2], points[0])]);
 
     state.calibration.measurements[0].push(sides[0]);
     state.calibration.measurements[1].push(sides[1]);
@@ -480,9 +476,9 @@ function updateLists() {
     .map((sig) => {
       const isActive = state.calibration.active && state.calibration.signatureId === sig.id;
       return renderItem(
-        `<strong>${sig.id}</strong> → (${sig.sides.map((v) => v.toFixed(1)).join(", ")}) <button class="btn-calibrate ${
-          isActive ? "active" : ""
-        }" data-id="${sig.id}">${isActive ? "Calibrating..." : "Calibrate"}</button>`
+        `<strong>${sig.id}</strong> → (${sig.sides.map((v) => v.toFixed(1)).join(", ")}) <button class="btn-calibrate ${isActive ? "active" : ""}" data-id="${
+          sig.id
+        }">${isActive ? "Calibrating..." : "Calibrate"}</button>`
       );
     })
     .join("");
