@@ -1,9 +1,6 @@
-import { get } from "idb-keyval";
 import { initSettings } from "./ai/settings";
-import { initCalibrationLifecycle } from "./calibration/calibration";
 import type { GameEntity, GameGlobal } from "./domain";
 import { createAnimationFrameDelta$, createResizeObserver$, World } from "./engine";
-import { getInputRawEvent$, getObjectEvents, type ObjectUpdate } from "./input";
 import { drawWorld } from "./render";
 import "./style.css";
 import { boxPackingSystem } from "./systems/box-packing";
@@ -14,6 +11,7 @@ import { movementSystem } from "./systems/movement";
 import { resizeSystem } from "./systems/resize";
 import { spawningSystem } from "./systems/spawning";
 import { zoneSystem } from "./systems/zone";
+import { initCalibrationLifecycle, initObjectTracking } from "./tracking/tracking";
 
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
@@ -92,26 +90,7 @@ canvas.addEventListener(
   { passive: false }
 );
 
-const handleObjectUpdate = (update: ObjectUpdate) => {
-  if (update.id !== "box") return;
-  if (update.type === "down" || update.type === "move") {
-    handleInput(update.position.x, update.position.y, update.rotation);
-  }
-};
-
-const setupObjectTracking = async () => {
-  try {
-    const signature = await get<{ id: string; sides: [number, number, number] }>("object-signature-box");
-    if (!signature?.sides) return;
-    const rawEvents$ = getInputRawEvent$(canvas);
-    getObjectEvents(rawEvents$, { knownObjects: [{ id: signature.id, sides: signature.sides }] }).subscribe(handleObjectUpdate);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(`Object tracking unavailable: calibration data could not be loaded (${message}).`, error);
-  }
-};
-
-setupObjectTracking();
+initObjectTracking(canvas, (x, y, rotation) => handleInput(x, y, rotation));
 
 // Game Loop
 const systems = [inputSystem, spawningSystem, movementSystem, itemStateSystem, boxPackingSystem, zoneSystem, feedbackSystem];

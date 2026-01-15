@@ -1,7 +1,7 @@
 import { del, set } from "idb-keyval";
 import { html, render } from "lit-html";
 import { Subscription } from "rxjs";
-import { getInputRawEvent$ } from "../input";
+import { getInputRawEvent$ } from "./input";
 
 interface ObjectSignature {
   id: string;

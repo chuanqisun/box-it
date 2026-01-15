@@ -1,6 +1,7 @@
 import { get } from "idb-keyval";
 import { CALIBRATION_OBJECT_IDS, CalibrationElement } from "./calibration-element";
 import "./calibration-element.css";
+import { getInputRawEvent$, getObjectEvents, type ObjectUpdate } from "./input";
 
 export async function loadCalibratedObjects(container: HTMLElement) {
   const items = await Promise.all(
@@ -72,4 +73,22 @@ export function initCalibrationLifecycle() {
       settingsMenu.showModal();
     });
   });
+}
+
+export async function initObjectTracking(canvas: HTMLCanvasElement, onUpdate: (x: number, y: number, rotation: number) => void) {
+  try {
+    const signature = await get<{ id: string; sides: [number, number, number] }>("object-signature-box");
+    if (!signature?.sides) return;
+
+    const rawEvents$ = getInputRawEvent$(canvas);
+    getObjectEvents(rawEvents$, { knownObjects: [{ id: signature.id, sides: signature.sides }] }).subscribe((update: ObjectUpdate) => {
+      if (update.id !== "box") return;
+      if (update.type === "down" || update.type === "move") {
+        onUpdate(update.position.x, update.position.y, update.rotation);
+      }
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`Object tracking unavailable: calibration data could not be loaded (${message}).`, error);
+  }
 }
