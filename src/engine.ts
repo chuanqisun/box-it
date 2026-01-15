@@ -125,17 +125,6 @@ export function addEntity<E extends BaseEntity, G>(world: WorldState<E, G>, enti
   };
 }
 
-export function updateEntity<E extends BaseEntity, G>(world: WorldState<E, G>, id: EntityId, updater: (entity: E) => E): WorldState<E, G> {
-  return {
-    ...world,
-    entities: world.entities.map((e) => (e.id === id ? updater(e) : e)),
-  };
-}
-
-export function getEntities<E extends BaseEntity, G, K extends keyof E>(world: WorldState<E, G>, ...components: K[]): E[] {
-  return world.entities.filter((e) => components.every((c) => c in e));
-}
-
 export function createAnimationFrameDelta$() {
   let lastTime = performance.now();
   return interval(0, animationFrameScheduler).pipe(
