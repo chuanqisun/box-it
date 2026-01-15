@@ -1,5 +1,5 @@
 import type { GameEntity, GameGlobal } from "../domain";
-import { addEntity, type System } from "../engine";
+import type { System } from "../engine";
 
 const OBJECTS = ["🧸", "📱", "👟", "📚", "⌚", "🎮", "🧴", "🕶️", "📷", "🎁", "💊", "👕"];
 const ITEM_SPEED_BELT = 250;
@@ -19,7 +19,7 @@ export const spawningSystem: System<GameEntity, GameGlobal> = (world, deltaTime)
     const padding = 30;
     const x = beltLeft + padding + Math.random() * (conveyor.width - padding * 2);
 
-    let currentWorld = addEntity(world, {
+    world.addEntity({
       transform: { x, y: -60, rotation: (Math.random() - 0.5) * 0.5, scale: 1 },
       velocity: { x: 0, y: ITEM_SPEED_BELT },
       render: { emoji },
@@ -28,16 +28,12 @@ export const spawningSystem: System<GameEntity, GameGlobal> = (world, deltaTime)
       physical: { size: ITEM_SIZE },
     });
 
-    return {
-      ...currentWorld,
-      entities: currentWorld.entities.map((e) =>
-        e.conveyor && e.spawner ? { ...e, spawner: { ...e.spawner, timer: 0, interval: Math.random() * 800 + 600 } } : e
-      ),
-    };
+    world.updateEntities((entities) =>
+      entities.map((e) => (e.conveyor && e.spawner ? { ...e, spawner: { ...e.spawner, timer: 0, interval: Math.random() * 800 + 600 } } : e))
+    );
+
+    return world;
   }
 
-  return {
-    ...world,
-    entities: world.entities.map((e) => (e.conveyor && e.spawner ? { ...e, spawner: { ...e.spawner, timer: newTimer } } : e)),
-  };
+  return world.updateEntities((entities) => entities.map((e) => (e.conveyor && e.spawner ? { ...e, spawner: { ...e.spawner, timer: newTimer } } : e)));
 };

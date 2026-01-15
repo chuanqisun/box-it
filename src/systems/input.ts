@@ -17,20 +17,12 @@ export const inputSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =
   newX = Math.max(0, Math.min(canvasWidth - box.collision.width, newX));
   newY = Math.max(0, Math.min(canvasHeight - box.collision.height, newY));
 
-  return {
-    ...world,
-    entities: world.entities.map((e) => {
-      if (e.id === box.id) {
-        return {
-          ...e,
-          transform: {
-            ...e.transform!,
-            x: newX,
-            y: newY,
-          },
-        };
-      }
-      return e;
-    }),
-  };
+  return world.updateEntity(box.id, (e) => ({
+    ...e,
+    transform: {
+      ...e.transform!,
+      x: newX,
+      y: newY,
+    },
+  }));
 };

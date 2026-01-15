@@ -1,22 +1,21 @@
-import type { GameEntity, GameGlobal } from "../domain";
-import type { WorldState } from "../engine";
+import type { GameWorld } from "../domain";
 
 const ZONE_SIZE = 200;
 
-export const resizeSystem = (world: WorldState<GameEntity, GameGlobal>, width: number, height: number) => {
+export const resizeSystem = (world: GameWorld, width: number, height: number) => {
   world.global.canvasEl.width = width;
   world.global.canvasEl.height = height;
 
   const conveyorWidth = Math.min(350, width * 0.4);
   const conveyorLength = height * 0.55;
 
-  return {
-    ...world,
-    global: {
-      ...world.global,
-      canvas: { width, height },
-    },
-    entities: world.entities.map((e) => {
+  world.updateGlobal((global) => ({
+    ...global,
+    canvas: { width, height },
+  }));
+
+  world.updateEntities((entities) =>
+    entities.map((e) => {
       if (e.conveyor) {
         return {
           ...e,
@@ -48,6 +47,8 @@ export const resizeSystem = (world: WorldState<GameEntity, GameGlobal>, width: n
         }
       }
       return e;
-    }),
-  };
+    })
+  );
+
+  return world;
 };

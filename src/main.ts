@@ -86,13 +86,10 @@ createAnimationFrameDelta$().subscribe((dt) => {
   world.runSystems(dt, systems).next();
   const scoreEntity = world.entities.find((e) => e.score);
   scoreEl.innerText = String(scoreEntity?.score?.value ?? 0);
-  drawWorld(ctx, { entities: world.entities, nextId: world.nextId, global: world.global });
+  drawWorld(ctx, world);
 });
 
 createResizeObserver$().subscribe(({ width, height }) => {
-  const resizedState = resizeSystem({ entities: world.entities, nextId: world.nextId, global: world.global }, width, height);
-  world
-    .updateEntities(() => resizedState.entities)
-    .setGlobal(resizedState.global)
-    .next();
+  resizeSystem(world, width, height);
+  world.next();
 });

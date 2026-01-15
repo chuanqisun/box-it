@@ -15,7 +15,7 @@ import type {
   WithVelocity,
   WithZone,
 } from "./components";
-import type { WorldState } from "./engine";
+import type { World } from "./engine";
 
 export type GameEntity = {
   id: number;
@@ -45,4 +45,4 @@ export interface GameGlobal {
   };
 }
 
-export type GameWorld = WorldState<GameEntity, GameGlobal>;
+export type GameWorld = World<GameEntity, GameGlobal>;

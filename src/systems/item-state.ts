@@ -5,44 +5,43 @@ const ITEM_SPEED_FALL = 450;
 
 export const itemStateSystem: System<GameEntity, GameGlobal> = (world, deltaTime) => {
   const conveyor = world.entities.find((e) => e.conveyor)?.conveyor;
-  const newEntities = world.entities
-    .map((entity) => {
-      if (entity.boxAnchor || !entity.itemState || !entity.transform || !entity.velocity) {
-        return entity;
-      }
+  const canvasHeight = world.global.canvas.height;
 
-      const item = entity;
-      let { state, fallScale } = item.itemState!;
-      let { y } = item.transform!;
-      let vy = item.velocity!.y;
-
-      if (state === "belt" && conveyor && y > conveyor.length) {
-        state = "falling";
-        vy = ITEM_SPEED_FALL;
-      }
-
-      if (state === "falling") {
-        if (fallScale > 0.7) {
-          fallScale -= (deltaTime / 1000) * 0.5;
+  return world.updateEntities((entities) =>
+    entities
+      .map((entity) => {
+        if (entity.boxAnchor || !entity.itemState || !entity.transform || !entity.velocity) {
+          return entity;
         }
-      }
 
-      return {
-        ...item,
-        itemState: { ...item.itemState!, state, fallScale },
-        velocity: { ...item.velocity!, y: vy },
-      };
-    })
-    .filter((item) => {
-      // Remove if off screen (only for items that are not packed)
-      if (!item.boxAnchor && item.itemState && item.transform && item.transform.y > world.global.canvas.height + 100) {
-        return false;
-      }
-      return true;
-    });
+        const item = entity;
+        let { state, fallScale } = item.itemState!;
+        let { y } = item.transform!;
+        let vy = item.velocity!.y;
 
-  return {
-    ...world,
-    entities: newEntities,
-  };
+        if (state === "belt" && conveyor && y > conveyor.length) {
+          state = "falling";
+          vy = ITEM_SPEED_FALL;
+        }
+
+        if (state === "falling") {
+          if (fallScale > 0.7) {
+            fallScale -= (deltaTime / 1000) * 0.5;
+          }
+        }
+
+        return {
+          ...item,
+          itemState: { ...item.itemState!, state, fallScale },
+          velocity: { ...item.velocity!, y: vy },
+        };
+      })
+      .filter((item) => {
+        // Remove if off screen (only for items that are not packed)
+        if (!item.boxAnchor && item.itemState && item.transform && item.transform.y > canvasHeight + 100) {
+          return false;
+        }
+        return true;
+      })
+  );
 };

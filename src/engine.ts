@@ -7,13 +7,7 @@ export interface BaseEntity {
   id: EntityId;
 }
 
-export interface WorldState<E extends BaseEntity, G> {
-  entities: E[];
-  nextId: EntityId;
-  global: G;
-}
-
-export type System<E extends BaseEntity, G> = (world: WorldState<E, G>, deltaTime: number) => WorldState<E, G>;
+export type System<E extends BaseEntity, G> = (world: World<E, G>, deltaTime: number) => World<E, G>;
 
 export class World<E extends BaseEntity, G> {
   private _entities: E[] = [];
@@ -92,37 +86,9 @@ export class World<E extends BaseEntity, G> {
   }
 
   runSystems(deltaTime: number, systems: System<E, G>[]): this {
-    let state: WorldState<E, G> = {
-      entities: this._entities,
-      nextId: this._nextId,
-      global: this._global,
-    };
-
-    state = systems.reduce((currentState, system) => system(currentState, deltaTime), state);
-
-    this._entities = state.entities;
-    this._nextId = state.nextId;
-    this._global = state.global;
-
+    systems.reduce((world, system) => system(world, deltaTime), this as World<E, G>);
     return this;
   }
-}
-
-// Standalone helper functions for use within systems (operate on WorldState)
-export function removeEntity<E extends BaseEntity, G>(world: WorldState<E, G>, id: EntityId): WorldState<E, G> {
-  return {
-    ...world,
-    entities: world.entities.filter((e) => e.id !== id),
-  };
-}
-
-export function addEntity<E extends BaseEntity, G>(world: WorldState<E, G>, entityData: Omit<E, "id">): WorldState<E, G> {
-  const newEntity = { ...entityData, id: world.nextId } as E;
-  return {
-    ...world,
-    entities: [...world.entities, newEntity],
-    nextId: world.nextId + 1,
-  };
 }
 
 export function createAnimationFrameDelta$() {

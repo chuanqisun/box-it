@@ -1,6 +1,5 @@
 import type { GameEntity, GameGlobal, GameWorld } from "../domain";
 import type { System } from "../engine";
-import { removeEntity } from "../engine";
 
 export const zoneSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) => {
   const boxEntity = world.entities.find((entity) => entity.box);
@@ -10,8 +9,6 @@ export const zoneSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
   if (!pointer) return world;
 
   const zones = world.entities.filter((e) => e.zone);
-
-  let currentWorld = world;
 
   for (const zone of zones) {
     if (!zone.transform || !zone.collision || !zone.zone) continue;
@@ -23,22 +20,22 @@ export const zoneSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
       pointer.y <= zone.transform.y + zone.collision.height;
 
     if (zone.zone.type === "shipping" && boxEntity.box?.hasBox && inZone) {
-      currentWorld = shipBox(currentWorld);
+      shipBox(world);
     }
     if (zone.zone.type === "restock" && !boxEntity.box?.hasBox && inZone) {
-      currentWorld = buyBox(currentWorld);
+      buyBox(world);
     }
   }
 
-  return currentWorld;
+  return world;
 };
 
-function shipBox(world: GameWorld): GameWorld {
+function shipBox(world: GameWorld): void {
   const packed = world.entities.filter((e) => e.boxAnchor);
-  if (packed.length === 0) return world;
+  if (packed.length === 0) return;
 
   const scoreEntity = world.entities.find((e) => e.score);
-  if (!scoreEntity?.score) return world;
+  if (!scoreEntity?.score) return;
 
   let boxValue = 0;
   packed.forEach((entity) => {
@@ -59,9 +56,8 @@ function shipBox(world: GameWorld): GameWorld {
     velocityY: -1,
   };
 
-  let currentWorld: GameWorld = {
-    ...world,
-    entities: world.entities.map((e) => {
+  world.updateEntities((entities) =>
+    entities.map((e) => {
       if (e.feedback) {
         return {
           ...e,
@@ -78,20 +74,18 @@ function shipBox(world: GameWorld): GameWorld {
         return { ...e, box: { ...e.box, hasBox: false } };
       }
       return e;
-    }),
-  };
+    })
+  );
 
   packed.forEach((p) => {
-    currentWorld = removeEntity(currentWorld, p.id);
+    world.removeEntity(p.id);
   });
-
-  return currentWorld;
 }
 
-function buyBox(world: GameWorld): GameWorld {
+function buyBox(world: GameWorld): void {
   const scoreEntity = world.entities.find((e) => e.score);
   const pointer = world.entities.find((e) => e.pointer)?.pointer;
-  if (!scoreEntity?.score || !pointer) return world;
+  if (!scoreEntity?.score || !pointer) return;
 
   if (scoreEntity.score.value < 200) {
     const feedback = {
@@ -103,9 +97,8 @@ function buyBox(world: GameWorld): GameWorld {
       life: 1,
       velocityY: -1,
     };
-    return {
-      ...world,
-      entities: world.entities.map((e) => {
+    world.updateEntities((entities) =>
+      entities.map((e) => {
         if (e.feedback) {
           return {
             ...e,
@@ -116,8 +109,9 @@ function buyBox(world: GameWorld): GameWorld {
           };
         }
         return e;
-      }),
-    };
+      })
+    );
+    return;
   }
 
   const feedback = {
@@ -130,9 +124,8 @@ function buyBox(world: GameWorld): GameWorld {
     velocityY: -1,
   };
 
-  const newWorld: GameWorld = {
-    ...world,
-    entities: world.entities.map((e) => {
+  world.updateEntities((entities) =>
+    entities.map((e) => {
       if (e.feedback) {
         return {
           ...e,
@@ -160,8 +153,6 @@ function buyBox(world: GameWorld): GameWorld {
         return { ...e, conveyor: { ...e.conveyor, isActive: true } };
       }
       return e;
-    }),
-  };
-
-  return newWorld;
+    })
+  );
 }

@@ -1,6 +1,5 @@
 import type { GameEntity, GameGlobal } from "../domain";
 import type { System } from "../engine";
-import { addEntity, removeEntity } from "../engine";
 
 const ITEM_SIZE = 45;
 
@@ -8,9 +7,8 @@ export const boxPackingSystem: System<GameEntity, GameGlobal> = (world, _deltaTi
   const box = world.entities.find((entity) => entity.box);
   if (!box?.transform || !box?.collision || !box?.box?.hasBox) return world;
 
-  let currentWorld = world;
-  const items = currentWorld.entities.filter((e) => e.itemState && !e.boxAnchor);
-  const packedItems = currentWorld.entities.filter((e) => e.boxAnchor);
+  const items = world.entities.filter((e) => e.itemState && !e.boxAnchor);
+  const packedItems = world.entities.filter((e) => e.boxAnchor);
 
   for (const item of items) {
     if (!item.transform || !item.itemState || item.itemState.state !== "falling") continue;
@@ -51,9 +49,8 @@ export const boxPackingSystem: System<GameEntity, GameGlobal> = (world, _deltaTi
         velocityY: -1,
       };
 
-      currentWorld = {
-        ...currentWorld,
-        entities: currentWorld.entities.map((e) => {
+      world.updateEntities((entities) =>
+        entities.map((e) => {
           if (e.feedback) {
             return {
               ...e,
@@ -64,11 +61,11 @@ export const boxPackingSystem: System<GameEntity, GameGlobal> = (world, _deltaTi
             };
           }
           return e;
-        }),
-      };
+        })
+      );
     }
 
-    currentWorld = addEntity(currentWorld, {
+    world.addEntity({
       transform: { x: relX, y: relY, rotation: (Math.random() - 0.5) * 1.0, scale: 0 },
       render: { emoji: item.render?.emoji ?? "📦" },
       collision: { width: ITEM_SIZE, height: ITEM_SIZE, type: "rectangle" },
@@ -78,13 +75,12 @@ export const boxPackingSystem: System<GameEntity, GameGlobal> = (world, _deltaTi
       physical: { size: ITEM_SIZE },
     });
 
-    currentWorld = removeEntity(currentWorld, item.id);
+    world.removeEntity(item.id);
   }
 
   // Also update packed scaling
-  currentWorld = {
-    ...currentWorld,
-    entities: currentWorld.entities.map((e) => {
+  return world.updateEntities((entities) =>
+    entities.map((e) => {
       if (e.boxAnchor && e.transform && e.itemState) {
         const targetScale = e.itemState.fallScale;
         if (e.transform.scale < targetScale) {
@@ -98,8 +94,6 @@ export const boxPackingSystem: System<GameEntity, GameGlobal> = (world, _deltaTi
         }
       }
       return e;
-    }),
-  };
-
-  return currentWorld;
+    })
+  );
 };
