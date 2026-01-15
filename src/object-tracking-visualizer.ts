@@ -61,6 +61,12 @@ const state = {
   nextTrackId: 1,
   lastFrame: performance.now(),
   dimensions: { width: 0, height: 0 },
+  calibration: {
+    active: false,
+    signatureId: "",
+    startTime: 0,
+    measurements: [[], [], []] as number[][],
+  },
 };
 
 const canvas = document.getElementById("otv-canvas") as HTMLCanvasElement;
@@ -82,6 +88,7 @@ const sigCInput = document.getElementById("sig-c") as HTMLInputElement;
 clearButton.addEventListener("click", () => {
   state.points.clear();
   state.tracks = [];
+  state.calibration.active = false;
 });
 
 addSigButton.addEventListener("click", () => {
@@ -99,6 +106,76 @@ addSigButton.addEventListener("click", () => {
   sigBInput.value = "";
   sigCInput.value = "";
 });
+
+sigList.addEventListener("click", (e) => {
+  const target = e.target as HTMLElement;
+  if (target.classList.contains("btn-calibrate")) {
+    const id = target.getAttribute("data-id");
+    if (id) {
+      if (state.calibration.active && state.calibration.signatureId === id) {
+        state.calibration.active = false;
+      } else {
+        startCalibration(id);
+      }
+    }
+  }
+});
+
+function startCalibration(id: string) {
+  state.calibration.active = true;
+  state.calibration.signatureId = id;
+  state.calibration.startTime = 0; // Will be set when 3 points are detected
+  state.calibration.measurements = [[], [], []];
+}
+
+function updateCalibration(now: number) {
+  if (!state.calibration.active) return;
+
+  const points = Array.from(state.points.values());
+  if (points.length === 3) {
+    if (state.calibration.startTime === 0) {
+      state.calibration.startTime = now;
+      state.calibration.measurements = [[], [], []];
+    }
+
+    const sides = sortSides([
+      distance(points[0], points[1]),
+      distance(points[1], points[2]),
+      distance(points[2], points[0]),
+    ]);
+
+    state.calibration.measurements[0].push(sides[0]);
+    state.calibration.measurements[1].push(sides[1]);
+    state.calibration.measurements[2].push(sides[2]);
+
+    if (now - state.calibration.startTime >= 2000) {
+      finishCalibration();
+    }
+  } else {
+    state.calibration.startTime = 0;
+    state.calibration.measurements = [[], [], []];
+  }
+}
+
+function finishCalibration() {
+  const avgSides: [number, number, number] = [
+    average(state.calibration.measurements[0]),
+    average(state.calibration.measurements[1]),
+    average(state.calibration.measurements[2]),
+  ];
+
+  const sig = registeredSignatures.find((s) => s.id === state.calibration.signatureId);
+  if (sig) {
+    sig.sides = avgSides;
+  }
+
+  state.calibration.active = false;
+  state.calibration.signatureId = "";
+}
+
+function average(vals: number[]) {
+  return vals.length === 0 ? 0 : vals.reduce((a, b) => a + b, 0) / vals.length;
+}
 
 function resizeCanvas() {
   const dpr = window.devicePixelRatio || 1;
@@ -200,6 +277,7 @@ function loop(now: number) {
     const ids = Array.from(state.points.keys());
     ids.slice(0, state.points.size - MAX_POINTS).forEach((id) => state.points.delete(id));
   }
+  updateCalibration(now);
   updateDetections();
   updateTracks(now);
   render(dt);
@@ -358,12 +436,56 @@ function render(dt: number) {
     ctx.fillText(`T${track.id}`, track.centroid.x + 12, track.centroid.y + 4);
   }
 
+  if (state.calibration.active) {
+    const now = performance.now();
+    const progress = state.calibration.startTime === 0 ? 0 : Math.min(1, (now - state.calibration.startTime) / 2000);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.textAlign = "center";
+    ctx.font = "600 14px Inter, sans-serif";
+    ctx.fillStyle = "#e6edf3";
+    ctx.fillText(`Calibrating: ${state.calibration.signatureId}`, width / 2, height / 2 - 25);
+
+    const bW = 240;
+    const bH = 8;
+    ctx.fillStyle = "#161b22";
+    ctx.roundRect(width / 2 - bW / 2, height / 2 - bH / 2, bW, bH, 4);
+    ctx.fill();
+
+    ctx.fillStyle = "#3a86ff";
+    ctx.roundRect(width / 2 - bW / 2, height / 2 - bH / 2, bW * progress, bH, 4);
+    ctx.fill();
+
+    if (state.points.size !== 3) {
+      ctx.fillStyle = "#f85149";
+      ctx.font = "11px Inter, sans-serif";
+      ctx.fillText("Place Exactly 3 Points to Calibrate", width / 2, height / 2 + 25);
+    } else {
+      ctx.fillStyle = "#8b949e";
+      ctx.font = "11px Inter, sans-serif";
+      ctx.fillText("Hold steady...", width / 2, height / 2 + 25);
+    }
+    ctx.textAlign = "left";
+  }
+
   ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
-  ctx.fillText(`Δt ${dt.toFixed(1)} ms`, width - 120, height - 12);
+  ctx.textAlign = "right";
+  ctx.fillText(`Δt ${dt.toFixed(1)} ms`, width - 12, height - 12);
+  ctx.textAlign = "left";
 }
 
 function updateLists() {
-  sigList.innerHTML = registeredSignatures.map((sig) => renderItem(`<strong>${sig.id}</strong> → (${sig.sides.map((v) => v.toFixed(1)).join(", ")})`)).join("");
+  sigList.innerHTML = registeredSignatures
+    .map((sig) => {
+      const isActive = state.calibration.active && state.calibration.signatureId === sig.id;
+      return renderItem(
+        `<strong>${sig.id}</strong> → (${sig.sides.map((v) => v.toFixed(1)).join(", ")}) <button class="btn-calibrate ${
+          isActive ? "active" : ""
+        }" data-id="${sig.id}">${isActive ? "Calibrating..." : "Calibrate"}</button>`
+      );
+    })
+    .join("");
 
   pointsList.innerHTML = Array.from(state.points.values())
     .map((point) => renderItem(`#${point.id} → (${point.sx.toFixed(1)}, ${point.sy.toFixed(1)}) v=(${point.vx.toFixed(3)}, ${point.vy.toFixed(3)})`))
