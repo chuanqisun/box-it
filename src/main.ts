@@ -1,7 +1,9 @@
+import { get } from "idb-keyval";
 import { initSettings } from "./ai/settings";
 import { initCalibrationLifecycle } from "./calibration/calibration";
 import type { GameEntity, GameGlobal } from "./domain";
 import { createAnimationFrameDelta$, createResizeObserver$, World } from "./engine";
+import { getInputRawEvent$, getObjectEvents, type ObjectUpdate } from "./input";
 import { drawWorld } from "./render";
 import "./style.css";
 import { boxPackingSystem } from "./systems/box-packing";
@@ -61,27 +63,50 @@ const world = new World<GameEntity, GameGlobal>(initialGlobal)
     collision: { width: ZONE_SIZE, height: ZONE_SIZE, type: "rectangle" },
   })
   .addEntity({
-    pointer: { x: 0, y: 0 },
+    pointer: { x: 0, y: 0, rotation: 0 },
   })
   .addEntity({
     score: { value: 600, packedCount: 0 },
   });
 
 // Input streams
-const handleInput = (clientX: number, clientY: number) => {
-  world.updateEntities((entities) => entities.map((e) => (e.pointer ? { ...e, pointer: { ...e.pointer, x: clientX, y: clientY } } : e))).next();
+let pointerState = { x: 0, y: 0, rotation: 0 };
+
+const updatePointerState = (next: Partial<typeof pointerState>) => {
+  pointerState = { ...pointerState, ...next };
+  world.updateEntities((entities) => entities.map((e) => (e.pointer ? { ...e, pointer: { ...pointerState } } : e))).next();
+};
+
+const handleInput = (clientX: number, clientY: number, rotation = pointerState.rotation) => {
+  updatePointerState({ x: clientX, y: clientY, rotation });
 };
 
 canvas.addEventListener("mousemove", (e) => handleInput(e.clientX, e.clientY));
 canvas.addEventListener(
-  "touchmove",
+  "wheel",
   (e) => {
     e.preventDefault();
-    const touch = e.touches[0];
-    if (touch) handleInput(touch.clientX, touch.clientY);
+    const rotationDelta = -e.deltaY * 0.002;
+    updatePointerState({ rotation: pointerState.rotation + rotationDelta });
   },
   { passive: false }
 );
+
+const handleObjectUpdate = (update: ObjectUpdate) => {
+  if (update.id !== "box") return;
+  if (update.type === "down" || update.type === "move") {
+    handleInput(update.position.x, update.position.y, update.rotation);
+  }
+};
+
+const setupObjectTracking = async () => {
+  const signature = await get<{ id: string; sides: [number, number, number] }>("object-signature-box");
+  if (!signature?.sides) return;
+  const rawEvents$ = getInputRawEvent$(canvas);
+  getObjectEvents(rawEvents$, { knownObjects: [{ id: signature.id ?? "box", sides: signature.sides }] }).subscribe(handleObjectUpdate);
+};
+
+setupObjectTracking();
 
 // Game Loop
 const systems = [inputSystem, spawningSystem, movementSystem, itemStateSystem, boxPackingSystem, zoneSystem, feedbackSystem];

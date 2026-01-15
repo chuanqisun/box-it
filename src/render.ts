@@ -121,21 +121,32 @@ function drawBox(ctx: CanvasRenderingContext2D, world: GameWorld) {
   const box = world.entities.find((e) => e.box);
   if (!box?.transform || !box?.collision) return;
 
+  ctx.save();
+  const centerX = box.transform.x + box.collision.width / 2;
+  const centerY = box.transform.y + box.collision.height / 2;
+  const halfWidth = box.collision.width / 2;
+  const halfHeight = box.collision.height / 2;
+  const wall = 8;
+  const left = -halfWidth;
+  const top = -halfHeight;
+
+  ctx.translate(centerX, centerY);
+  ctx.rotate(box.transform.rotation);
+
   ctx.fillStyle = "rgba(0,0,0,0.5)";
   ctx.beginPath();
-  ctx.ellipse(box.transform.x + box.collision.width / 2 + 15, box.transform.y + box.collision.height + 15, box.collision.width / 2, 20, 0, 0, Math.PI * 2);
+  ctx.ellipse(left + halfWidth + 15, top + box.collision.height + 15, halfWidth, 20, 0, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.fillStyle = BOX_COLOR;
-  ctx.fillRect(box.transform.x, box.transform.y, box.collision.width, box.collision.height);
+  ctx.fillRect(left, top, box.collision.width, box.collision.height);
 
   ctx.fillStyle = BOX_SHADOW;
-  const wall = 8;
-  ctx.fillRect(box.transform.x + wall, box.transform.y + wall, box.collision.width - wall * 2, box.collision.height - wall * 2);
+  ctx.fillRect(left + wall, top + wall, box.collision.width - wall * 2, box.collision.height - wall * 2);
 
   ctx.save();
   ctx.beginPath();
-  ctx.rect(box.transform.x + wall, box.transform.y + wall, box.collision.width - wall * 2, box.collision.height - wall * 2);
+  ctx.rect(left + wall, top + wall, box.collision.width - wall * 2, box.collision.height - wall * 2);
   ctx.clip();
 
   world.entities
@@ -143,7 +154,7 @@ function drawBox(ctx: CanvasRenderingContext2D, world: GameWorld) {
     .forEach((packed) => {
       if (!packed.transform || !packed.boxAnchor) return;
       ctx.save();
-      ctx.translate(box.transform!.x + packed.boxAnchor.relX, box.transform!.y + packed.boxAnchor.relY);
+      ctx.translate(left + packed.boxAnchor.relX, top + packed.boxAnchor.relY);
       ctx.rotate(packed.transform.rotation);
       ctx.scale(packed.transform.scale, packed.transform.scale);
 
@@ -172,18 +183,19 @@ function drawBox(ctx: CanvasRenderingContext2D, world: GameWorld) {
 
   ctx.strokeStyle = "#a07040";
   ctx.lineWidth = 4;
-  ctx.strokeRect(box.transform.x, box.transform.y, box.collision.width, box.collision.height);
+  ctx.strokeRect(left, top, box.collision.width, box.collision.height);
 
   ctx.beginPath();
-  ctx.moveTo(box.transform.x, box.transform.y);
-  ctx.lineTo(box.transform.x + 25, box.transform.y + 25);
-  ctx.moveTo(box.transform.x + box.collision.width, box.transform.y);
-  ctx.lineTo(box.transform.x + box.collision.width - 25, box.transform.y + 25);
-  ctx.moveTo(box.transform.x, box.transform.y + box.collision.height);
-  ctx.lineTo(box.transform.x + 25, box.transform.y + box.collision.height - 25);
-  ctx.moveTo(box.transform.x + box.collision.width, box.transform.y + box.collision.height);
-  ctx.lineTo(box.transform.x + box.collision.width - 25, box.transform.y + box.collision.height - 25);
+  ctx.moveTo(left, top);
+  ctx.lineTo(left + 25, top + 25);
+  ctx.moveTo(left + box.collision.width, top);
+  ctx.lineTo(left + box.collision.width - 25, top + 25);
+  ctx.moveTo(left, top + box.collision.height);
+  ctx.lineTo(left + 25, top + box.collision.height - 25);
+  ctx.moveTo(left + box.collision.width, top + box.collision.height);
+  ctx.lineTo(left + box.collision.width - 25, top + box.collision.height - 25);
   ctx.stroke();
+  ctx.restore();
 }
 
 function drawConveyor(ctx: CanvasRenderingContext2D, world: GameWorld, conveyor: NonNullable<GameEntity["conveyor"]>) {

@@ -48,6 +48,7 @@ export interface WithPointer {
   pointer: {
     x: number;
     y: number;
+    rotation: number;
   };
 }
 

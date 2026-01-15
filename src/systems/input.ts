@@ -23,6 +23,7 @@ export const inputSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =
       ...e.transform!,
       x: newX,
       y: newY,
+      rotation: pointer.rotation ?? e.transform?.rotation ?? 0,
     },
   }));
 };
