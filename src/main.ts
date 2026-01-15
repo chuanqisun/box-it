@@ -1,4 +1,5 @@
 import { BehaviorSubject } from "rxjs";
+import { initSettings } from "./ai/settings";
 import type { GameEntity, GameGlobal, GameWorld } from "./domain";
 import { addEntity, createAnimationFrameDelta$, createResizeObserver$, createWorld, runSystems } from "./engine";
 import { drawWorld } from "./render";
@@ -15,6 +16,8 @@ import { zoneSystem } from "./systems/zone";
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
 const scoreEl = document.getElementById("score")!;
+
+initSettings();
 
 const BOX_WIDTH = 180;
 const BOX_HEIGHT = 130;

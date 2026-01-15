@@ -19,7 +19,24 @@
         <span class="value">+$100</span>
       </div>
     </div>
+    <div id="settings-button-container">
+      <button id="settings-button" class="gear-button" commandfor="settingsMenu" command="show-modal" aria-label="Open settings">⚙️</button>
+    </div>
     <canvas id="gameCanvas"></canvas>
+    <dialog id="settingsMenu" class="settings-dialog">
+      <div class="dialog-header">
+        <h2>Settings</h2>
+        <button class="dialog-close" commandfor="settingsMenu" command="close" aria-label="Close settings">✕</button>
+      </div>
+      <div class="dialog-body">
+        <label for="apiKeyInput">Google AI Studio API Key</label>
+        <input id="apiKeyInput" type="password" placeholder="Paste API key" autocomplete="off" spellcheck="false" />
+      </div>
+      <div class="dialog-footer">
+        <button id="clearApiKey" class="btn btn-danger">Clear</button>
+        <button id="saveApiKey" class="btn btn-primary">Save</button>
+      </div>
+    </dialog>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
