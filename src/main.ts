@@ -103,7 +103,7 @@ const setupObjectTracking = async () => {
   const signature = await get<{ id: string; sides: [number, number, number] }>("object-signature-box");
   if (!signature?.sides) return;
   const rawEvents$ = getInputRawEvent$(canvas);
-  getObjectEvents(rawEvents$, { knownObjects: [{ id: signature.id ?? "box", sides: signature.sides }] }).subscribe(handleObjectUpdate);
+  getObjectEvents(rawEvents$, { knownObjects: [{ id: signature.id, sides: signature.sides }] }).subscribe(handleObjectUpdate);
 };
 
 setupObjectTracking();

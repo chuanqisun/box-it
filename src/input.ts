@@ -38,7 +38,7 @@ interface TrackedObjectState {
   isActive: boolean;
 }
 
-const SIGNATURE_TOLERANCE = 0.3;
+const SIGNATURE_TOLERANCE_RATIO = 0.3;
 const MATCH_DISTANCE_RATIO = 0.6;
 
 export function getObjectEvents(rawEvents$: Observable<TouchEvent>, context: ObjectTrackingContext): Observable<ObjectUpdate> {
@@ -151,7 +151,7 @@ function assignTouchesToObjects(
   for (const state of objectStates.values()) {
     for (const combo of combinations) {
       const signatureScore = getSignatureScore(combo, state.signature);
-      if (signatureScore > SIGNATURE_TOLERANCE) continue;
+      if (signatureScore > SIGNATURE_TOLERANCE_RATIO) continue;
       const center = getCentroid(combo);
       const distancePenalty = state.position ? getDistance(center, state.position) / Math.max(...state.signature) : 0;
       const score = signatureScore + distancePenalty * 0.35;
@@ -271,6 +271,7 @@ function getRotation(points: TouchPoint[], previousRotation?: number): number {
   const baseAngle = Math.atan2(points[j].y - points[i].y, points[j].x - points[i].x);
   if (previousRotation === undefined) return baseAngle;
 
+  // Avoid sudden 180° flips by choosing the angle closest to the previous rotation.
   const flipped = normalizeAngle(baseAngle + Math.PI);
   const baseDelta = Math.abs(normalizeAngle(baseAngle - previousRotation));
   const flippedDelta = Math.abs(normalizeAngle(flipped - previousRotation));

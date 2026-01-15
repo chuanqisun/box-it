@@ -6,6 +6,8 @@ const CONVEYOR_COLOR = "#1a1a1a";
 const CONVEYOR_BORDER_COLOR = "#f39c12";
 const BOX_COLOR = "#d2b48c";
 const BOX_SHADOW = "#8b5a2b";
+const BOX_SHADOW_OFFSET = 15;
+const BOX_SHADOW_HEIGHT = 20;
 const ITEM_SIZE = 45;
 
 export function drawWorld(ctx: CanvasRenderingContext2D, world: GameWorld) {
@@ -135,7 +137,7 @@ function drawBox(ctx: CanvasRenderingContext2D, world: GameWorld) {
 
   ctx.fillStyle = "rgba(0,0,0,0.5)";
   ctx.beginPath();
-  ctx.ellipse(left + halfWidth + 15, top + box.collision.height + 15, halfWidth, 20, 0, 0, Math.PI * 2);
+  ctx.ellipse(left + halfWidth + BOX_SHADOW_OFFSET, top + box.collision.height + BOX_SHADOW_OFFSET, halfWidth, BOX_SHADOW_HEIGHT, 0, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.fillStyle = BOX_COLOR;
