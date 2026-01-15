@@ -6,7 +6,7 @@ const ITEM_SPEED_BELT = 250;
 const ITEM_SIZE = 45;
 
 export const spawningSystem: System<GameEntity, GameGlobal> = (world, deltaTime) => {
-  const conveyorEntity = world.entities.find((e) => e.kind === "conveyor");
+  const conveyorEntity = world.entities.find((e) => e.conveyor);
   const conveyor = conveyorEntity?.conveyor;
   const spawner = conveyorEntity?.spawner;
   if (!conveyor || !conveyor.isActive || !spawner) return world;
@@ -20,7 +20,6 @@ export const spawningSystem: System<GameEntity, GameGlobal> = (world, deltaTime)
     const x = beltLeft + padding + Math.random() * (conveyor.width - padding * 2);
 
     let currentWorld = addEntity(world, {
-      kind: "item",
       transform: { x, y: -60, rotation: (Math.random() - 0.5) * 0.5, scale: 1 },
       velocity: { x: 0, y: ITEM_SPEED_BELT },
       render: { emoji },
@@ -32,13 +31,13 @@ export const spawningSystem: System<GameEntity, GameGlobal> = (world, deltaTime)
     return {
       ...currentWorld,
       entities: currentWorld.entities.map((e) =>
-        e.kind === "conveyor" && e.spawner ? { ...e, spawner: { ...e.spawner, timer: 0, interval: Math.random() * 800 + 600 } } : e
+        e.conveyor && e.spawner ? { ...e, spawner: { ...e.spawner, timer: 0, interval: Math.random() * 800 + 600 } } : e
       ),
     };
   }
 
   return {
     ...world,
-    entities: world.entities.map((e) => (e.kind === "conveyor" && e.spawner ? { ...e, spawner: { ...e.spawner, timer: newTimer } } : e)),
+    entities: world.entities.map((e) => (e.conveyor && e.spawner ? { ...e, spawner: { ...e.spawner, timer: newTimer } } : e)),
   };
 };

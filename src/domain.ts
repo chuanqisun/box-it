@@ -16,11 +16,8 @@ import type {
 } from "./components";
 import type { World } from "./engine";
 
-export type EntityKind = "item" | "box" | "packed-item" | "zone" | "conveyor" | "pointer" | "score";
-
 export type GameEntity = {
   id: number;
-  kind: EntityKind;
 } & Partial<
   WithTransform &
     WithVelocity &

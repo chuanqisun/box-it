@@ -5,7 +5,6 @@ export type EntityId = number;
 
 export interface BaseEntity {
   id: EntityId;
-  kind: string;
 }
 
 export interface World<E extends BaseEntity, G> {

@@ -2,10 +2,10 @@ import type { GameEntity, GameGlobal } from "../domain";
 import type { System } from "../engine";
 
 export const inputSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) => {
-  const box = world.entities.find((entity) => entity.kind === "box");
+  const box = world.entities.find((entity) => entity.box);
   if (!box?.transform || !box?.collision || !box?.box?.hasBox) return world;
 
-  const pointer = world.entities.find((e) => e.kind === "pointer")?.pointer;
+  const pointer = world.entities.find((e) => e.pointer)?.pointer;
   if (!pointer) return world;
 
   const canvasWidth = world.global.canvas.width;

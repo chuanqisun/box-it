@@ -34,7 +34,6 @@ let world = createWorld<GameEntity, GameGlobal>(initialGlobal);
 
 // Initial Entities
 world = addEntity(world, {
-  kind: "conveyor",
   conveyor: {
     isActive: false,
     offset: 0,
@@ -46,7 +45,6 @@ world = addEntity(world, {
 });
 
 world = addEntity(world, {
-  kind: "box",
   transform: { x: 0, y: 0, rotation: 0, scale: 1 },
   collision: { width: BOX_WIDTH, height: BOX_HEIGHT, type: "rectangle" },
   render: { emoji: "📦" },
@@ -54,26 +52,22 @@ world = addEntity(world, {
 });
 
 world = addEntity(world, {
-  kind: "zone",
   zone: { type: "restock" },
   transform: { x: 0, y: 0, rotation: 0, scale: 1 },
   collision: { width: ZONE_SIZE, height: ZONE_SIZE, type: "rectangle" },
 });
 
 world = addEntity(world, {
-  kind: "zone",
   zone: { type: "shipping" },
   transform: { x: 0, y: 0, rotation: 0, scale: 1 },
   collision: { width: ZONE_SIZE, height: ZONE_SIZE, type: "rectangle" },
 });
 
 world = addEntity(world, {
-  kind: "pointer",
   pointer: { x: 0, y: 0 },
 });
 
 world = addEntity(world, {
-  kind: "score",
   score: { value: 600, packedCount: 0 },
 });
 
@@ -84,7 +78,7 @@ const handleInput = (clientX: number, clientY: number) => {
   const current = world$.value;
   world$.next({
     ...current,
-    entities: current.entities.map((e) => (e.kind === "pointer" && e.pointer ? { ...e, pointer: { ...e.pointer, x: clientX, y: clientY } } : e)),
+    entities: current.entities.map((e) => (e.pointer ? { ...e, pointer: { ...e.pointer, x: clientX, y: clientY } } : e)),
   });
 };
 
@@ -106,7 +100,7 @@ createAnimationFrameDelta$().subscribe((dt) => {
   const currentWorld = world$.value;
   const newWorld = runSystems(currentWorld, dt, systems);
   world$.next(newWorld);
-  const scoreEntity = newWorld.entities.find((e) => e.kind === "score");
+  const scoreEntity = newWorld.entities.find((e) => e.score);
   scoreEl.innerText = String(scoreEntity?.score?.value ?? 0);
   drawWorld(ctx, newWorld);
 });

@@ -3,7 +3,7 @@ import type { System } from "../engine";
 
 export const movementSystem: System<GameEntity, GameGlobal> = (world, deltaTime) => {
   const newEntities = world.entities.map((entity) => {
-    if (entity.kind === "conveyor" && entity.conveyor) {
+    if (entity.conveyor) {
       const { isActive, offset, speed } = entity.conveyor;
       return {
         ...entity,

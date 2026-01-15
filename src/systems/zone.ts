@@ -3,13 +3,13 @@ import type { System } from "../engine";
 import { removeEntity } from "../engine";
 
 export const zoneSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) => {
-  const boxEntity = world.entities.find((entity) => entity.kind === "box");
+  const boxEntity = world.entities.find((entity) => entity.box);
   if (!boxEntity?.transform || !boxEntity?.collision) return world;
 
-  const pointer = world.entities.find((e) => e.kind === "pointer")?.pointer;
+  const pointer = world.entities.find((e) => e.pointer)?.pointer;
   if (!pointer) return world;
 
-  const zones = world.entities.filter((e) => e.kind === "zone");
+  const zones = world.entities.filter((e) => e.zone);
 
   let currentWorld = world;
 
@@ -34,10 +34,10 @@ export const zoneSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
 };
 
 function shipBox(world: GameWorld): GameWorld {
-  const packed = world.entities.filter((e) => e.kind === "packed-item");
+  const packed = world.entities.filter((e) => e.boxAnchor);
   if (packed.length === 0) return world;
 
-  const scoreEntity = world.entities.find((e) => e.kind === "score");
+  const scoreEntity = world.entities.find((e) => e.score);
   if (!scoreEntity?.score) return world;
 
   let boxValue = 0;
@@ -66,10 +66,10 @@ function shipBox(world: GameWorld): GameWorld {
       feedbackEffects: [...world.global.feedbackEffects, newFeedback],
     },
     entities: world.entities.map((e) => {
-      if (e.kind === "score" && e.score) {
+      if (e.score) {
         return { ...e, score: { ...e.score, value: e.score.value + boxValue } };
       }
-      if (e.kind === "box" && e.box) {
+      if (e.box) {
         return { ...e, box: { ...e.box, hasBox: false } };
       }
       return e;
@@ -84,8 +84,8 @@ function shipBox(world: GameWorld): GameWorld {
 }
 
 function buyBox(world: GameWorld): GameWorld {
-  const scoreEntity = world.entities.find((e) => e.kind === "score");
-  const pointer = world.entities.find((e) => e.kind === "pointer")?.pointer;
+  const scoreEntity = world.entities.find((e) => e.score);
+  const pointer = world.entities.find((e) => e.pointer)?.pointer;
   if (!scoreEntity?.score || !pointer) return world;
 
   if (scoreEntity.score.value < 200) {
@@ -124,10 +124,10 @@ function buyBox(world: GameWorld): GameWorld {
       feedbackEffects: [...world.global.feedbackEffects, feedback],
     },
     entities: world.entities.map((e) => {
-      if (e.kind === "score" && e.score) {
+      if (e.score) {
         return { ...e, score: { ...e.score, value: e.score.value - 200 } };
       }
-      if (e.kind === "box" && e.box && e.transform && e.collision) {
+      if (e.box && e.transform && e.collision) {
         return {
           ...e,
           box: { ...e.box, hasBox: true },
@@ -138,7 +138,7 @@ function buyBox(world: GameWorld): GameWorld {
           },
         };
       }
-      if (e.kind === "conveyor" && e.conveyor) {
+      if (e.conveyor) {
         return { ...e, conveyor: { ...e.conveyor, isActive: true } };
       }
       return e;

@@ -13,8 +13,8 @@ export function drawWorld(ctx: CanvasRenderingContext2D, world: GameWorld) {
 
   drawZones(ctx, world);
 
-  const boxEntity = world.entities.find((e) => e.kind === "box");
-  const pointer = world.entities.find((e) => e.kind === "pointer")?.pointer;
+  const boxEntity = world.entities.find((e) => e.box);
+  const pointer = world.entities.find((e) => e.pointer)?.pointer;
 
   if (boxEntity?.box?.hasBox) {
     drawBox(ctx, world);
@@ -27,13 +27,13 @@ export function drawWorld(ctx: CanvasRenderingContext2D, world: GameWorld) {
     ctx.stroke();
   }
 
-  const items = world.entities.filter((e) => e.kind === "item");
+  const items = world.entities.filter((e) => e.itemState && !e.boxAnchor);
 
   items.forEach((item) => {
     if (item.itemState?.state === "falling") drawItem(ctx, item);
   });
 
-  const conveyor = world.entities.find((e) => e.kind === "conveyor" && e.conveyor)?.conveyor;
+  const conveyor = world.entities.find((e) => e.conveyor)?.conveyor;
   if (conveyor) {
     drawConveyor(ctx, world, conveyor);
 
@@ -52,11 +52,11 @@ export function drawWorld(ctx: CanvasRenderingContext2D, world: GameWorld) {
 }
 
 function drawZones(ctx: CanvasRenderingContext2D, world: GameWorld) {
-  const boxEntity = world.entities.find((e) => e.kind === "box");
+  const boxEntity = world.entities.find((e) => e.box);
   const hasBox = boxEntity?.box?.hasBox ?? false;
 
   world.entities
-    .filter((e) => e.kind === "zone")
+    .filter((e) => e.zone)
     .forEach((zone) => {
       if (!zone.transform || !zone.collision || !zone.zone) return;
 
@@ -97,7 +97,7 @@ function drawZones(ctx: CanvasRenderingContext2D, world: GameWorld) {
         ctx.font = "bold 20px Arial";
         ctx.textAlign = "center";
 
-        const packedCount = world.entities.filter((e) => e.kind === "packed-item").length;
+        const packedCount = world.entities.filter((e) => e.boxAnchor).length;
         if (hasBox && packedCount > 0) {
           ctx.fillText("SHIP IT!", 0, -15);
           ctx.fillText(`(${packedCount} ITEMS)`, 0, 15);
@@ -113,7 +113,7 @@ function drawZones(ctx: CanvasRenderingContext2D, world: GameWorld) {
 }
 
 function drawBox(ctx: CanvasRenderingContext2D, world: GameWorld) {
-  const box = world.entities.find((e) => e.kind === "box");
+  const box = world.entities.find((e) => e.box);
   if (!box?.transform || !box?.collision) return;
 
   ctx.fillStyle = "rgba(0,0,0,0.5)";
@@ -134,7 +134,7 @@ function drawBox(ctx: CanvasRenderingContext2D, world: GameWorld) {
   ctx.clip();
 
   world.entities
-    .filter((e) => e.kind === "packed-item")
+    .filter((e) => e.boxAnchor)
     .forEach((packed) => {
       if (!packed.transform || !packed.boxAnchor) return;
       ctx.save();

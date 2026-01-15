@@ -17,7 +17,7 @@ export const resizeSystem = (world: World<GameEntity, GameGlobal>, width: number
       canvas: { width, height },
     },
     entities: world.entities.map((e) => {
-      if (e.kind === "conveyor" && e.conveyor) {
+      if (e.conveyor) {
         return {
           ...e,
           conveyor: {
@@ -27,7 +27,7 @@ export const resizeSystem = (world: World<GameEntity, GameGlobal>, width: number
           },
         };
       }
-      if (e.kind === "box" && e.transform && e.collision) {
+      if (e.box && e.transform && e.collision) {
         if (e.transform.x === 0 && e.transform.y === 0) {
           return {
             ...e,
@@ -39,7 +39,7 @@ export const resizeSystem = (world: World<GameEntity, GameGlobal>, width: number
           };
         }
       }
-      if (e.kind === "zone" && e.transform && e.collision && e.zone) {
+      if (e.zone && e.transform && e.collision) {
         if (e.zone.type === "restock") {
           return { ...e, transform: { ...e.transform, x: 0, y: height - ZONE_SIZE } };
         }
