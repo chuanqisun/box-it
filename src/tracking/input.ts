@@ -38,7 +38,7 @@ interface TrackedObjectState {
   isActive: boolean;
 }
 
-const SIGNATURE_TOLERANCE_RATIO = 0.3; // avg relative error allowed for side length matching
+const SIGNATURE_TOLERANCE_RATIO = 0.35; // avg relative error allowed for side length matching (soft cap)
 const MATCH_DISTANCE_RATIO = 0.6; // max distance ratio for reusing missing touch points
 
 export function getObjectEvents(rawEvents$: Observable<TouchEvent>, context: ObjectTrackingContext): Observable<ObjectUpdate> {
@@ -137,11 +137,7 @@ function computeObjectUpdates(touches: TouchPoint[], objectStates: Map<string, T
   return updates;
 }
 
-function assignTouchesToObjects(
-  touches: TouchPoint[],
-  objectStates: Map<string, TrackedObjectState>,
-  usedTouchIds: Set<number>
-): Map<string, TouchPoint[]> {
+function assignTouchesToObjects(touches: TouchPoint[], objectStates: Map<string, TrackedObjectState>, usedTouchIds: Set<number>): Map<string, TouchPoint[]> {
   const assignments = new Map<string, TouchPoint[]>();
   if (touches.length < 3) return assignments;
 
@@ -151,11 +147,12 @@ function assignTouchesToObjects(
   for (const state of objectStates.values()) {
     for (const combo of combinations) {
       const signatureScore = getSignatureScore(combo, state.signature);
-      if (signatureScore > SIGNATURE_TOLERANCE_RATIO) continue;
       const center = getCentroid(combo);
       const distancePenalty = state.position ? getDistance(center, state.position) / Math.max(...state.signature) : 0;
       const score = signatureScore + distancePenalty * 0.35;
-      candidates.push({ objectId: state.id, points: combo, score });
+      if (signatureScore <= SIGNATURE_TOLERANCE_RATIO) {
+        candidates.push({ objectId: state.id, points: combo, score });
+      }
     }
   }
 
@@ -243,8 +240,12 @@ function updatePointsFromNearbyTouches(
 
 function getSignatureScore(points: TouchPoint[], signature: [number, number, number]): number {
   const sides = calculateSides(points);
-  const diffs = sides.map((side, index) => Math.abs(side - signature[index]) / signature[index]);
-  return diffs.reduce((sum, value) => sum + value, 0) / diffs.length;
+  const dx = sides[0] - signature[0];
+  const dy = sides[1] - signature[1];
+  const dz = sides[2] - signature[2];
+  const distance = Math.hypot(dx, dy, dz);
+  const normalization = Math.hypot(signature[0], signature[1], signature[2]) || 1;
+  return distance / normalization;
 }
 
 function calculateSides(points: TouchPoint[]): [number, number, number] {

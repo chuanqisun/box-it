@@ -51,11 +51,42 @@ export function drawWorld(ctx: CanvasRenderingContext2D, world: GameWorld) {
     ctx.restore();
   }
 
+  drawTools(ctx, world);
+
   world.entities.forEach((entity) => {
     if (entity.feedback) {
       drawFeedback(ctx, entity.feedback.effects);
     }
   });
+}
+
+function drawTools(ctx: CanvasRenderingContext2D, world: GameWorld) {
+  const tools = world.entities.filter((e) => e.tool && e.transform && e.collision);
+  for (const tool of tools) {
+    if (!tool.transform || !tool.collision || !tool.tool) continue;
+    const centerX = tool.transform.x + tool.collision.width / 2;
+    const centerY = tool.transform.y + tool.collision.height / 2;
+    const radius =
+      tool.collision.type === "circle" && tool.collision.radius ? tool.collision.radius : Math.max(tool.collision.width, tool.collision.height) / 2;
+
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.rotate(tool.transform.rotation);
+    ctx.fillStyle = tool.tool.isColliding ? "rgba(231, 76, 60, 0.5)" : "rgba(52, 152, 219, 0.35)";
+    ctx.strokeStyle = tool.tool.isColliding ? "#e74c3c" : "#3498db";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 16px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(tool.tool.id.toUpperCase(), 0, 0);
+    ctx.restore();
+  }
 }
 
 function drawZones(ctx: CanvasRenderingContext2D, world: GameWorld) {

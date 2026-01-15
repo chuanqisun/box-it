@@ -75,16 +75,23 @@ export function initCalibrationLifecycle() {
   });
 }
 
-export async function initObjectTracking(canvas: HTMLCanvasElement, onUpdate: (x: number, y: number, rotation: number) => void) {
+export async function initObjectTracking(canvas: HTMLCanvasElement, onUpdate: (id: string, x: number, y: number, rotation: number) => void) {
   try {
-    const signature = await get<{ id: string; sides: [number, number, number] }>("object-signature-box");
-    if (!signature?.sides) return;
+    const signatures = await Promise.all(
+      ["box", "tool1", "tool2"].map(async (id) => ({
+        id,
+        signature: await get<{ id: string; sides: [number, number, number] }>(`object-signature-${id}`),
+      }))
+    );
+
+    const knownObjects = signatures.filter((entry) => entry.signature?.sides).map((entry) => ({ id: entry.id, sides: entry.signature!.sides }));
+
+    if (knownObjects.length === 0) return;
 
     const rawEvents$ = getInputRawEvent$(canvas);
-    getObjectEvents(rawEvents$, { knownObjects: [{ id: signature.id, sides: signature.sides }] }).subscribe((update: ObjectUpdate) => {
-      if (update.id !== "box") return;
+    getObjectEvents(rawEvents$, { knownObjects }).subscribe((update: ObjectUpdate) => {
       if (update.type === "down" || update.type === "move") {
-        onUpdate(update.position.x, update.position.y, update.rotation);
+        onUpdate(update.id, update.position.x, update.position.y, update.rotation);
       }
     });
   } catch (error) {

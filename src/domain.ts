@@ -11,6 +11,7 @@ import type {
   WithRender,
   WithScore,
   WithSpawner,
+  WithTool,
   WithTransform,
   WithVelocity,
   WithZone,
@@ -34,7 +35,8 @@ export type GameEntity = {
     WithBox &
     WithPointer &
     WithFeedback &
-    WithSpawner
+    WithSpawner &
+    WithTool
 >;
 
 export interface GameGlobal {

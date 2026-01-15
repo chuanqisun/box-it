@@ -116,3 +116,10 @@ export interface WithFeedback {
     effects: FeedbackEffect[];
   };
 }
+
+export interface WithTool {
+  tool: {
+    id: "tool1" | "tool2";
+    isColliding: boolean;
+  };
+}

@@ -10,6 +10,7 @@ import { itemStateSystem } from "./systems/item-state";
 import { movementSystem } from "./systems/movement";
 import { resizeSystem } from "./systems/resize";
 import { spawningSystem } from "./systems/spawning";
+import { toolSystem } from "./systems/tool";
 import { zoneSystem } from "./systems/zone";
 import { initCalibrationLifecycle, initObjectTracking } from "./tracking/tracking";
 
@@ -25,6 +26,7 @@ initCalibrationLifecycle();
 const BOX_WIDTH = 180;
 const BOX_HEIGHT = 130;
 const ZONE_SIZE = 200;
+const TOOL_SIZE = 80;
 
 // Initial state
 const initialGlobal: GameGlobal = {
@@ -64,6 +66,16 @@ const world = new World<GameEntity, GameGlobal>(initialGlobal)
     pointer: { x: 0, y: 0, rotation: 0 },
   })
   .addEntity({
+    tool: { id: "tool1", isColliding: false },
+    transform: { x: 40, y: 40, rotation: 0, scale: 1 },
+    collision: { width: TOOL_SIZE, height: TOOL_SIZE, type: "circle", radius: TOOL_SIZE / 2 },
+  })
+  .addEntity({
+    tool: { id: "tool2", isColliding: false },
+    transform: { x: window.innerWidth - TOOL_SIZE - 40, y: 40, rotation: 0, scale: 1 },
+    collision: { width: TOOL_SIZE, height: TOOL_SIZE, type: "circle", radius: TOOL_SIZE / 2 },
+  })
+  .addEntity({
     score: { value: 600, packedCount: 0 },
   });
 
@@ -79,6 +91,25 @@ const handleInput = (clientX: number, clientY: number, rotation = pointerState.r
   updatePointerState({ x: clientX, y: clientY, rotation });
 };
 
+const updateToolState = (toolId: "tool1" | "tool2", x: number, y: number, rotation: number) => {
+  world
+    .updateEntities((entities) =>
+      entities.map((e) => {
+        if (!e.tool || e.tool.id !== toolId || !e.transform || !e.collision) return e;
+        return {
+          ...e,
+          transform: {
+            ...e.transform,
+            x: x - e.collision.width / 2,
+            y: y - e.collision.height / 2,
+            rotation,
+          },
+        };
+      })
+    )
+    .next();
+};
+
 canvas.addEventListener("mousemove", (e) => handleInput(e.clientX, e.clientY));
 canvas.addEventListener(
   "wheel",
@@ -90,10 +121,17 @@ canvas.addEventListener(
   { passive: false }
 );
 
-initObjectTracking(canvas, (x, y, rotation) => handleInput(x, y, rotation));
+initObjectTracking(canvas, (id, x, y, rotation) => {
+  if (id === "box") {
+    handleInput(x, y, rotation);
+  }
+  if (id === "tool1" || id === "tool2") {
+    updateToolState(id, x, y, rotation);
+  }
+});
 
 // Game Loop
-const systems = [inputSystem, spawningSystem, movementSystem, itemStateSystem, boxPackingSystem, zoneSystem, feedbackSystem];
+const systems = [inputSystem, spawningSystem, movementSystem, itemStateSystem, boxPackingSystem, toolSystem, zoneSystem, feedbackSystem];
 
 startMenu.showModal();
 
