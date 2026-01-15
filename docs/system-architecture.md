@@ -131,3 +131,14 @@ Each loop, process:
 - play sound effects
 - check level completion
 - generate new objects in staging area
+
+Systems division:
+
+- Input System
+- Collision System
+- Tool System
+- Box System
+- Scoring System
+- Generation System
+- Sound System
+- Rendering System
