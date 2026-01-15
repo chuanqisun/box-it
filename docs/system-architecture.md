@@ -83,3 +83,51 @@ On the high level, the game has three areas: staging, transportation, packing. E
 - Overlapping object will deduct points
 - Certain types of objects may not be packed together (e.g. live animals and food)
 - When fully packed, user need to move box to delivery zone and receive new box from supply zone.
+
+## Entity-Component-System (ECS)
+
+Tools can change objects:
+
+- Iron: flatten and fold clothes
+- Ziploc bag: contain food items
+- Screwdriver: disassemble electronics
+
+Collision and release detection:
+
+- Tool collision with object
+- Object release at end of belt
+- Object collision with box to fall inside
+- Object collision with other objects inside box
+- Box cart collision with delivery zone
+- Box cart collision with supply zone
+
+### Entities
+
+- Game objects: items, boxes, tools
+- Zones: staging area, conveyor belt, packing area, delivery zone, supply zone, floor
+- UI elements: score display, timer, level indicator
+
+### Components
+
+- Transform: position, rotation, scale
+- Renderable: visual representation
+- Collidable: collision box, collision response
+- DynamicProperties: incompatibility category
+- ToolEffect: effect on objects when used
+- SoundEffect: sound to play on interaction
+- ScoreValue: points associated with object
+- Owner: staging, conveyor belt, box, floor
+
+### Systems
+
+Each loop, process:
+
+- object updates -> update entity
+- resolve collisions, change of ownership
+- apply tool effects
+- resolve inter-object interactions
+- update score
+- render world
+- play sound effects
+- check level completion
+- generate new objects in staging area
