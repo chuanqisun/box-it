@@ -106,7 +106,8 @@ const setupObjectTracking = async () => {
     const rawEvents$ = getInputRawEvent$(canvas);
     getObjectEvents(rawEvents$, { knownObjects: [{ id: signature.id, sides: signature.sides }] }).subscribe(handleObjectUpdate);
   } catch (error) {
-    console.warn("Object tracking unavailable: calibration data could not be loaded.", error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`Object tracking unavailable: calibration data could not be loaded (${message}).`, error);
   }
 };
 

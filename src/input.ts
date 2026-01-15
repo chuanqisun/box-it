@@ -38,8 +38,8 @@ interface TrackedObjectState {
   isActive: boolean;
 }
 
-const SIGNATURE_TOLERANCE_RATIO = 0.3;
-const MATCH_DISTANCE_RATIO = 0.6;
+const SIGNATURE_TOLERANCE_RATIO = 0.3; // avg relative error allowed for side length matching
+const MATCH_DISTANCE_RATIO = 0.6; // max distance ratio for reusing missing touch points
 
 export function getObjectEvents(rawEvents$: Observable<TouchEvent>, context: ObjectTrackingContext): Observable<ObjectUpdate> {
   return new Observable<ObjectUpdate>((subscriber) => {
