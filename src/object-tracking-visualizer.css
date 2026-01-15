@@ -3,51 +3,61 @@
   font-family: "Inter", system-ui, sans-serif;
   background: #0d1117;
   color: #e6edf3;
+  height: 100%;
 }
 body {
   margin: 0;
+  height: 100%;
+  overflow: hidden;
 }
 .otv-root {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
 }
 .otv-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 28px;
+  padding: 8px 16px;
   background: #0b0f14;
   border-bottom: 1px solid #1f2630;
+  flex-shrink: 0;
 }
 .otv-header h1 {
-  margin: 0 0 6px;
-  font-size: 22px;
+  margin: 0;
+  font-size: 16px;
+  display: inline-block;
+  margin-right: 12px;
 }
 .otv-header p {
   margin: 0;
   color: #9fb0c2;
+  font-size: 11px;
+  display: inline-block;
 }
 .otv-controls button {
-  padding: 8px 14px;
+  padding: 4px 10px;
   background: #238636;
   border: none;
-  border-radius: 8px;
+  border-radius: 4px;
   color: white;
   cursor: pointer;
+  font-size: 12px;
 }
 .otv-main {
   display: grid;
-  grid-template-columns: minmax(320px, 2.2fr) minmax(280px, 1fr);
-  gap: 20px;
-  padding: 20px 28px 28px;
+  grid-template-columns: 1fr 340px;
+  gap: 8px;
+  padding: 8px;
   flex: 1;
+  overflow: hidden;
 }
 .otv-visual {
   position: relative;
   background: #0f141b;
   border: 1px solid #1f2630;
-  border-radius: 16px;
+  border-radius: 8px;
   overflow: hidden;
   display: flex;
   align-items: stretch;
@@ -60,22 +70,23 @@ body {
 }
 .otv-legend {
   position: absolute;
-  left: 16px;
-  top: 16px;
-  padding: 12px 14px;
-  background: rgba(12, 18, 26, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  display: grid;
-  gap: 6px;
-  font-size: 12px;
+  left: 8px;
+  top: 8px;
+  padding: 6px 10px;
+  background: rgba(12, 18, 26, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  display: flex;
+  gap: 12px;
+  font-size: 10px;
+  pointer-events: none;
 }
 .dot {
   display: inline-block;
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  margin-right: 6px;
+  margin-right: 4px;
 }
 .dot-point {
   background: #4ea8de;
@@ -92,51 +103,79 @@ body {
 .otv-panel {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
+/* Custom Scrollbar for density */
+.otv-panel::-webkit-scrollbar {
+  width: 6px;
+}
+.otv-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+.otv-panel::-webkit-scrollbar-thumb {
+  background: #30363d;
+  border-radius: 3px;
+}
+.otv-panel::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}
+
 .panel-block {
   background: #0f141b;
   border: 1px solid #1f2630;
-  border-radius: 16px;
-  padding: 14px 16px;
+  border-radius: 8px;
+  padding: 10px;
 }
 .panel-block h2 {
-  margin: 0 0 10px;
-  font-size: 16px;
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 .otv-signature-form {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
-  gap: 8px;
-  margin-bottom: 10px;
+  grid-template-columns: repeat(4, 1fr) auto;
+  gap: 4px;
+  margin-bottom: 8px;
 }
 .otv-signature-form input {
-  padding: 6px 8px;
-  border-radius: 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
   border: 1px solid #293241;
   background: #0c1117;
   color: #e6edf3;
+  font-size: 11px;
+  width: 100%;
+  box-sizing: border-box;
 }
 .otv-signature-form button {
-  padding: 6px 10px;
+  padding: 4px 8px;
   background: #3a86ff;
   border: none;
   color: white;
-  border-radius: 8px;
+  border-radius: 4px;
   cursor: pointer;
+  font-size: 11px;
 }
 .otv-list {
   display: grid;
-  gap: 8px;
-  font-size: 12px;
+  gap: 2px;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   color: #c7d0db;
 }
 .otv-item {
-  padding: 8px 10px;
-  border-radius: 10px;
+  padding: 4px 8px;
+  border-radius: 4px;
   background: #0b1016;
   border: 1px solid #1f2630;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .otv-item strong {
-  color: #e6edf3;
+  color: #58a6ff;
 }

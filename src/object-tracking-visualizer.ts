@@ -63,62 +63,6 @@ const state = {
   dimensions: { width: 0, height: 0 },
 };
 
-const root = document.createElement("div");
-root.className = "otv-root";
-root.innerHTML = `
-	<header class="otv-header">
-		<div>
-			<h1>Object Tracking Visualizer</h1>
-			<p>Touch or click to create points. Visualizes signatures, triangles, and match results.</p>
-		</div>
-		<div class="otv-controls">
-			<button id="clear-points">Clear points</button>
-		</div>
-	</header>
-	<main class="otv-main">
-		<section class="otv-visual">
-			<canvas id="otv-canvas"></canvas>
-			<div class="otv-legend">
-				<div><span class="dot dot-point"></span> Touch points</div>
-				<div><span class="dot dot-tri"></span> Detected triangle</div>
-				<div><span class="dot dot-match"></span> Matched object</div>
-				<div><span class="dot dot-track"></span> Tracked object</div>
-			</div>
-		</section>
-		<section class="otv-panel">
-			<div class="panel-block">
-				<h2>Registered Signatures</h2>
-				<div class="otv-signature-form">
-					<input id="sig-id" placeholder="id" />
-					<input id="sig-a" type="number" placeholder="a" />
-					<input id="sig-b" type="number" placeholder="b" />
-					<input id="sig-c" type="number" placeholder="c" />
-					<button id="add-sig">Add</button>
-				</div>
-				<div id="sig-list" class="otv-list"></div>
-			</div>
-			<div class="panel-block">
-				<h2>Current Points</h2>
-				<div id="points-list" class="otv-list"></div>
-			</div>
-			<div class="panel-block">
-				<h2>Detected Triangles</h2>
-				<div id="triangles-list" class="otv-list"></div>
-			</div>
-			<div class="panel-block">
-				<h2>Match Results</h2>
-				<div id="matches-list" class="otv-list"></div>
-			</div>
-			<div class="panel-block">
-				<h2>Tracking</h2>
-				<div id="tracks-list" class="otv-list"></div>
-			</div>
-		</section>
-	</main>
-`;
-
-document.body.appendChild(root);
-
 const canvas = document.getElementById("otv-canvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
 
@@ -157,10 +101,9 @@ addSigButton.addEventListener("click", () => {
 });
 
 function resizeCanvas() {
-  const rect = canvas.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
-  const width = rect.width;
-  const height = rect.height;
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
 
   canvas.width = Math.round(width * dpr);
   canvas.height = Math.round(height * dpr);
@@ -174,21 +117,35 @@ function resizeCanvas() {
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
+function getAreaOffset(el: HTMLElement) {
+  let x = 0;
+  let y = 0;
+  let curr: HTMLElement | null = el;
+  while (curr) {
+    x += curr.offsetLeft;
+    y += curr.offsetTop;
+    curr = curr.offsetParent as HTMLElement;
+  }
+  return { x, y };
+}
+
 canvas.addEventListener("touchstart", (event) => {
   event.preventDefault();
-  const rect = canvas.getBoundingClientRect();
+  const area = event.currentTarget as HTMLElement;
+  const offset = getAreaOffset(area);
   for (let i = 0; i < event.changedTouches.length; i++) {
     const touch = event.changedTouches[i];
-    addOrUpdatePoint(touch.identifier, touch.clientX, touch.clientY, rect);
+    addOrUpdatePoint(touch.identifier, touch.pageX - offset.x, touch.pageY - offset.y);
   }
 });
 
 canvas.addEventListener("touchmove", (event) => {
   event.preventDefault();
-  const rect = canvas.getBoundingClientRect();
+  const area = event.currentTarget as HTMLElement;
+  const offset = getAreaOffset(area);
   for (let i = 0; i < event.touches.length; i++) {
     const touch = event.touches[i];
-    addOrUpdatePoint(touch.identifier, touch.clientX, touch.clientY, rect);
+    addOrUpdatePoint(touch.identifier, touch.pageX - offset.x, touch.pageY - offset.y);
   }
 });
 
@@ -208,9 +165,7 @@ canvas.addEventListener("touchcancel", (event) => {
   }
 });
 
-function addOrUpdatePoint(id: number, clientX: number, clientY: number, rect: DOMRect) {
-  const x = clientX - rect.left;
-  const y = clientY - rect.top;
+function addOrUpdatePoint(id: number, x: number, y: number) {
   const now = performance.now();
   const existing = state.points.get(id);
   if (!existing) {

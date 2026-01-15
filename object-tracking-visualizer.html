@@ -6,6 +6,57 @@
     <title>Object Tracking Visualizer</title>
   </head>
   <body>
+    <div class="otv-root">
+      <header class="otv-header">
+        <div>
+          <h1>Object Tracking Visualizer</h1>
+          <p>Touch or click to create points. Visualizes signatures, triangles, and match results.</p>
+        </div>
+        <div class="otv-controls">
+          <button id="clear-points">Clear points</button>
+        </div>
+      </header>
+      <main class="otv-main">
+        <section class="otv-visual">
+          <canvas id="otv-canvas"></canvas>
+          <div class="otv-legend">
+            <div><span class="dot dot-point"></span> Touch points</div>
+            <div><span class="dot dot-tri"></span> Detected triangle</div>
+            <div><span class="dot dot-match"></span> Matched object</div>
+            <div><span class="dot dot-track"></span> Tracked object</div>
+          </div>
+        </section>
+        <section class="otv-panel">
+          <div class="panel-block">
+            <h2>Registered Signatures</h2>
+            <div class="otv-signature-form">
+              <input id="sig-id" placeholder="id" />
+              <input id="sig-a" type="number" placeholder="a" />
+              <input id="sig-b" type="number" placeholder="b" />
+              <input id="sig-c" type="number" placeholder="c" />
+              <button id="add-sig">Add</button>
+            </div>
+            <div id="sig-list" class="otv-list"></div>
+          </div>
+          <div class="panel-block">
+            <h2>Current Points</h2>
+            <div id="points-list" class="otv-list"></div>
+          </div>
+          <div class="panel-block">
+            <h2>Detected Triangles</h2>
+            <div id="triangles-list" class="otv-list"></div>
+          </div>
+          <div class="panel-block">
+            <h2>Match Results</h2>
+            <div id="matches-list" class="otv-list"></div>
+          </div>
+          <div class="panel-block">
+            <h2>Tracking</h2>
+            <div id="tracks-list" class="otv-list"></div>
+          </div>
+        </section>
+      </main>
+    </div>
     <script type="module" src="/src/object-tracking-visualizer.ts"></script>
   </body>
 </html>
