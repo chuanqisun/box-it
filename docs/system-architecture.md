@@ -110,7 +110,7 @@ Collision and release detection:
 ### Components
 
 - Transform: position, rotation, scale
-- Renderable: visual representation
+- Renderable: visual asset reference
 - Collidable: collision box, collision response
 - DynamicProperties: incompatibility category
 - ToolEffect: effect on objects when used
