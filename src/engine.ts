@@ -1,3 +1,6 @@
+import { animationFrameScheduler, interval } from "rxjs";
+import { map } from "rxjs/operators";
+
 export type EntityId = number;
 
 export interface BaseEntity {
@@ -50,4 +53,16 @@ export function getEntities<E extends BaseEntity, G, K extends keyof E>(world: W
 
 export function runSystems<E extends BaseEntity, G>(world: World<E, G>, deltaTime: number, systems: System<E, G>[]): World<E, G> {
   return systems.reduce((currentWorld, system) => system(currentWorld, deltaTime), world);
+}
+
+export function createAnimationFrameDelta$() {
+  let lastTime = performance.now();
+  return interval(0, animationFrameScheduler).pipe(
+    map(() => {
+      const now = performance.now();
+      const dt = now - lastTime;
+      lastTime = now;
+      return dt;
+    })
+  );
 }

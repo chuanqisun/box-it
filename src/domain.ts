@@ -27,6 +27,10 @@ export interface GameGlobal {
   packedCount: number;
   mouseX: number;
   mouseY: number;
+  resizePending: boolean;
+  resizeWidth: number;
+  resizeHeight: number;
+  canvasEl: HTMLCanvasElement;
   canvas: {
     width: number;
     height: number;
