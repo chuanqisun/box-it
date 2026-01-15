@@ -1,14 +1,9 @@
 import type { GameEntity, GameGlobal } from "../domain";
-import type { System } from "../engine";
+import type { World } from "../engine";
 
 const ZONE_SIZE = 200;
 
-export const resizeSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) => {
-  if (!world.global.resizePending) return world;
-
-  const width = world.global.resizeWidth;
-  const height = world.global.resizeHeight;
-
+export const resizeSystem = (world: World<GameEntity, GameGlobal>, width: number, height: number) => {
   world.global.canvasEl.width = width;
   world.global.canvasEl.height = height;
 
@@ -19,7 +14,6 @@ export const resizeSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) 
     ...world,
     global: {
       ...world.global,
-      resizePending: false,
       canvas: { width, height },
       conveyor: { width: conveyorWidth, length: conveyorLength },
     },

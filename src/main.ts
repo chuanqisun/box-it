@@ -1,18 +1,16 @@
 import { BehaviorSubject } from "rxjs";
 import type { GameEntity, GameGlobal, GameWorld } from "./domain";
-import { addEntity, createAnimationFrameDelta$, createWorld, runSystems } from "./engine";
+import { addEntity, createAnimationFrameDelta$, createResizeObserver$, createWorld, runSystems } from "./engine";
 import { drawWorld } from "./render";
 import "./style.css";
-
-// Systems
-import { boxPackingSystem } from "./systems/boxPackingSystem";
-import { feedbackSystem } from "./systems/feedbackSystem";
-import { inputSystem } from "./systems/inputSystem";
-import { itemStateSystem } from "./systems/itemStateSystem";
-import { movementSystem } from "./systems/movementSystem";
-import { resizeSystem } from "./systems/resizeSystem";
-import { spawningSystem } from "./systems/spawningSystem";
-import { zoneSystem } from "./systems/zoneSystem";
+import { boxPackingSystem } from "./systems/box-packing";
+import { feedbackSystem } from "./systems/feedback";
+import { inputSystem } from "./systems/input";
+import { itemStateSystem } from "./systems/item-state";
+import { movementSystem } from "./systems/movement";
+import { resizeSystem } from "./systems/resize";
+import { spawningSystem } from "./systems/spawning";
+import { zoneSystem } from "./systems/zone";
 
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
@@ -31,9 +29,6 @@ const initialGlobal: GameGlobal = {
   packedCount: 0,
   mouseX: 0,
   mouseY: 0,
-  resizePending: true,
-  resizeWidth: window.innerWidth,
-  resizeHeight: window.innerHeight,
   canvasEl: canvas,
   canvas: { width: window.innerWidth, height: window.innerHeight },
   conveyor: { width: 300, length: window.innerHeight * 0.55 },
@@ -64,24 +59,9 @@ world = addEntity(world, {
   collision: { width: ZONE_SIZE, height: ZONE_SIZE, type: "rectangle" },
 });
 
-world = resizeSystem(world, 0);
-
 const world$ = new BehaviorSubject<GameWorld>(world);
 
 // Input streams
-window.addEventListener("resize", () => {
-  const current = world$.value;
-  world$.next({
-    ...current,
-    global: {
-      ...current.global,
-      resizePending: true,
-      resizeWidth: window.innerWidth,
-      resizeHeight: window.innerHeight,
-    },
-  });
-});
-
 const handleInput = (clientX: number, clientY: number) => {
   const current = world$.value;
   world$.next({
@@ -106,7 +86,7 @@ canvas.addEventListener(
 );
 
 // Game Loop
-const systems = [resizeSystem, inputSystem, spawningSystem, movementSystem, itemStateSystem, boxPackingSystem, zoneSystem, feedbackSystem];
+const systems = [inputSystem, spawningSystem, movementSystem, itemStateSystem, boxPackingSystem, zoneSystem, feedbackSystem];
 
 createAnimationFrameDelta$().subscribe((dt) => {
   const currentWorld = world$.value;
@@ -114,4 +94,10 @@ createAnimationFrameDelta$().subscribe((dt) => {
   world$.next(newWorld);
   scoreEl.innerText = String(newWorld.global.score);
   drawWorld(ctx, newWorld);
+});
+
+createResizeObserver$().subscribe(({ width, height }) => {
+  const current = world$.value;
+  const resizedWorld = resizeSystem(current, width, height);
+  world$.next(resizedWorld);
 });

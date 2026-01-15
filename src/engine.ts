@@ -1,5 +1,5 @@
-import { animationFrameScheduler, interval } from "rxjs";
-import { map } from "rxjs/operators";
+import { animationFrameScheduler, fromEvent, interval } from "rxjs";
+import { distinctUntilChanged, map, startWith } from "rxjs/operators";
 
 export type EntityId = number;
 
@@ -64,5 +64,13 @@ export function createAnimationFrameDelta$() {
       lastTime = now;
       return dt;
     })
+  );
+}
+
+export function createResizeObserver$() {
+  return fromEvent(window, "resize").pipe(
+    startWith(0),
+    map(() => ({ width: window.innerWidth, height: window.innerHeight })),
+    distinctUntilChanged((a, b) => a.width === b.width && a.height === b.height)
   );
 }
