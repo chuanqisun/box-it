@@ -99,3 +99,19 @@ export interface WithConveyor {
     length: number;
   };
 }
+
+export interface FeedbackEffect {
+  text: string;
+  x: number;
+  y: number;
+  color: string;
+  size: number;
+  life: number;
+  velocityY: number;
+}
+
+export interface WithFeedback {
+  feedback: {
+    effects: FeedbackEffect[];
+  };
+}

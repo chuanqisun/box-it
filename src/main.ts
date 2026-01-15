@@ -27,12 +27,13 @@ const ZONE_SIZE = 200;
 const initialGlobal: GameGlobal = {
   canvasEl: canvas,
   canvas: { width: window.innerWidth, height: window.innerHeight },
-  feedbackEffects: [],
 };
 
 let world = createWorld<GameEntity, GameGlobal>(initialGlobal);
 
 // Initial Entities
+world = addEntity(world, { feedback: { effects: [] } });
+
 world = addEntity(world, {
   conveyor: {
     isActive: false,

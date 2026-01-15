@@ -41,23 +41,30 @@ export const boxPackingSystem: System<GameEntity, GameGlobal> = (world, _deltaTi
     }
 
     if (overlap) {
+      const effect = {
+        text: "⚠️",
+        x: box.transform.x + box.collision.width / 2,
+        y: box.transform.y,
+        color: "#ff4444",
+        size: 36,
+        life: 1,
+        velocityY: -1,
+      };
+
       currentWorld = {
         ...currentWorld,
-        global: {
-          ...currentWorld.global,
-          feedbackEffects: [
-            ...currentWorld.global.feedbackEffects,
-            {
-              text: "⚠️",
-              x: box.transform.x + box.collision.width / 2,
-              y: box.transform.y,
-              color: "#ff4444",
-              size: 36,
-              life: 1,
-              velocityY: -1,
-            },
-          ],
-        },
+        entities: currentWorld.entities.map((e) => {
+          if (e.feedback) {
+            return {
+              ...e,
+              feedback: {
+                ...e.feedback,
+                effects: [...e.feedback.effects, effect],
+              },
+            };
+          }
+          return e;
+        }),
       };
     }
 

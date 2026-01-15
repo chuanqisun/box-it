@@ -61,11 +61,16 @@ function shipBox(world: GameWorld): GameWorld {
 
   let currentWorld: GameWorld = {
     ...world,
-    global: {
-      ...world.global,
-      feedbackEffects: [...world.global.feedbackEffects, newFeedback],
-    },
     entities: world.entities.map((e) => {
+      if (e.feedback) {
+        return {
+          ...e,
+          feedback: {
+            ...e.feedback,
+            effects: [...e.feedback.effects, newFeedback],
+          },
+        };
+      }
       if (e.score) {
         return { ...e, score: { ...e.score, value: e.score.value + boxValue } };
       }
@@ -100,10 +105,18 @@ function buyBox(world: GameWorld): GameWorld {
     };
     return {
       ...world,
-      global: {
-        ...world.global,
-        feedbackEffects: [...world.global.feedbackEffects, feedback],
-      },
+      entities: world.entities.map((e) => {
+        if (e.feedback) {
+          return {
+            ...e,
+            feedback: {
+              ...e.feedback,
+              effects: [...e.feedback.effects, feedback],
+            },
+          };
+        }
+        return e;
+      }),
     };
   }
 
@@ -119,11 +132,16 @@ function buyBox(world: GameWorld): GameWorld {
 
   const newWorld: GameWorld = {
     ...world,
-    global: {
-      ...world.global,
-      feedbackEffects: [...world.global.feedbackEffects, feedback],
-    },
     entities: world.entities.map((e) => {
+      if (e.feedback) {
+        return {
+          ...e,
+          feedback: {
+            ...e.feedback,
+            effects: [...e.feedback.effects, feedback],
+          },
+        };
+      }
       if (e.score) {
         return { ...e, score: { ...e.score, value: e.score.value - 200 } };
       }

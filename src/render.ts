@@ -1,4 +1,5 @@
-import type { GameEntity, GameGlobal, GameWorld } from "./domain";
+import type { FeedbackEffect } from "./components";
+import type { GameEntity, GameWorld } from "./domain";
 
 const FLOOR_COLOR = "#2a2a2a";
 const CONVEYOR_COLOR = "#1a1a1a";
@@ -48,7 +49,11 @@ export function drawWorld(ctx: CanvasRenderingContext2D, world: GameWorld) {
     ctx.restore();
   }
 
-  drawFeedback(ctx, world.global.feedbackEffects);
+  world.entities.forEach((entity) => {
+    if (entity.feedback) {
+      drawFeedback(ctx, entity.feedback.effects);
+    }
+  });
 }
 
 function drawZones(ctx: CanvasRenderingContext2D, world: GameWorld) {
@@ -253,7 +258,7 @@ function drawItem(ctx: CanvasRenderingContext2D, item: GameEntity) {
   ctx.restore();
 }
 
-function drawFeedback(ctx: CanvasRenderingContext2D, feedbackEffects: GameGlobal["feedbackEffects"]) {
+function drawFeedback(ctx: CanvasRenderingContext2D, feedbackEffects: FeedbackEffect[]) {
   feedbackEffects.forEach((effect) => {
     ctx.save();
     ctx.globalAlpha = effect.life;

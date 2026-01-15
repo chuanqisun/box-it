@@ -3,6 +3,7 @@ import type {
   WithBoxAnchor,
   WithCollision,
   WithConveyor,
+  WithFeedback,
   WithItemState,
   WithPhysical,
   WithPointer,
@@ -32,6 +33,7 @@ export type GameEntity = {
     WithConveyor &
     WithBox &
     WithPointer &
+    WithFeedback &
     WithSpawner
 >;
 
@@ -41,15 +43,6 @@ export interface GameGlobal {
     width: number;
     height: number;
   };
-  feedbackEffects: Array<{
-    text: string;
-    x: number;
-    y: number;
-    color: string;
-    size: number;
-    life: number;
-    velocityY: number;
-  }>;
 }
 
 export type GameWorld = World<GameEntity, GameGlobal>;
