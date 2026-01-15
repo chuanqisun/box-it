@@ -58,6 +58,8 @@ interface ObjectUpdate {
 }
 ```
 
+Note that the Object Signature and Update are only used in the input system. The game world is decoupled from the input system and has a different representation of game objects.
+
 ## World simulation
 
 On the high level, the game has three areas: staging, transportation, packing. Each area has different interaction mechanisms.
