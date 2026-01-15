@@ -25,16 +25,8 @@ const ZONE_SIZE = 200;
 
 // Initial state
 const initialGlobal: GameGlobal = {
-  score: 600,
-  hasBox: true,
-  spawnTimer: 0,
-  spawnInterval: 1000,
-  packedCount: 0,
-  mouseX: 0,
-  mouseY: 0,
   canvasEl: canvas,
   canvas: { width: window.innerWidth, height: window.innerHeight },
-  conveyor: { width: 300, length: window.innerHeight * 0.55 },
   feedbackEffects: [],
 };
 
@@ -42,10 +34,23 @@ let world = createWorld<GameEntity, GameGlobal>(initialGlobal);
 
 // Initial Entities
 world = addEntity(world, {
+  kind: "conveyor",
+  conveyor: {
+    isActive: false,
+    offset: 0,
+    speed: 250,
+    width: 300,
+    length: window.innerHeight * 0.55,
+  },
+  spawner: { timer: 0, interval: 1000 },
+});
+
+world = addEntity(world, {
   kind: "box",
   transform: { x: 0, y: 0, rotation: 0, scale: 1 },
   collision: { width: BOX_WIDTH, height: BOX_HEIGHT, type: "rectangle" },
   render: { emoji: "📦" },
+  box: { hasBox: false },
 });
 
 world = addEntity(world, {
@@ -62,6 +67,16 @@ world = addEntity(world, {
   collision: { width: ZONE_SIZE, height: ZONE_SIZE, type: "rectangle" },
 });
 
+world = addEntity(world, {
+  kind: "pointer",
+  pointer: { x: 0, y: 0 },
+});
+
+world = addEntity(world, {
+  kind: "score",
+  score: { value: 600, packedCount: 0 },
+});
+
 const world$ = new BehaviorSubject<GameWorld>(world);
 
 // Input streams
@@ -69,11 +84,7 @@ const handleInput = (clientX: number, clientY: number) => {
   const current = world$.value;
   world$.next({
     ...current,
-    global: {
-      ...current.global,
-      mouseX: clientX,
-      mouseY: clientY,
-    },
+    entities: current.entities.map((e) => (e.kind === "pointer" && e.pointer ? { ...e, pointer: { ...e.pointer, x: clientX, y: clientY } } : e)),
   });
 };
 
@@ -95,7 +106,8 @@ createAnimationFrameDelta$().subscribe((dt) => {
   const currentWorld = world$.value;
   const newWorld = runSystems(currentWorld, dt, systems);
   world$.next(newWorld);
-  scoreEl.innerText = String(newWorld.global.score);
+  const scoreEntity = newWorld.entities.find((e) => e.kind === "score");
+  scoreEl.innerText = String(scoreEntity?.score?.value ?? 0);
   drawWorld(ctx, newWorld);
 });
 

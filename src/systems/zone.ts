@@ -3,8 +3,11 @@ import type { System } from "../engine";
 import { removeEntity } from "../engine";
 
 export const zoneSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) => {
-  const box = world.entities.find((entity) => entity.kind === "box");
-  if (!box?.transform || !box?.collision) return world;
+  const boxEntity = world.entities.find((entity) => entity.kind === "box");
+  if (!boxEntity?.transform || !boxEntity?.collision) return world;
+
+  const pointer = world.entities.find((e) => e.kind === "pointer")?.pointer;
+  if (!pointer) return world;
 
   const zones = world.entities.filter((e) => e.kind === "zone");
 
@@ -14,15 +17,15 @@ export const zoneSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
     if (!zone.transform || !zone.collision || !zone.zone) continue;
 
     const inZone =
-      world.global.mouseX >= zone.transform.x &&
-      world.global.mouseX <= zone.transform.x + zone.collision.width &&
-      world.global.mouseY >= zone.transform.y &&
-      world.global.mouseY <= zone.transform.y + zone.collision.height;
+      pointer.x >= zone.transform.x &&
+      pointer.x <= zone.transform.x + zone.collision.width &&
+      pointer.y >= zone.transform.y &&
+      pointer.y <= zone.transform.y + zone.collision.height;
 
-    if (zone.zone.type === "shipping" && world.global.hasBox && inZone) {
+    if (zone.zone.type === "shipping" && boxEntity.box?.hasBox && inZone) {
       currentWorld = shipBox(currentWorld);
     }
-    if (zone.zone.type === "restock" && !world.global.hasBox && inZone) {
+    if (zone.zone.type === "restock" && !boxEntity.box?.hasBox && inZone) {
       currentWorld = buyBox(currentWorld);
     }
   }
@@ -33,6 +36,9 @@ export const zoneSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
 function shipBox(world: GameWorld): GameWorld {
   const packed = world.entities.filter((e) => e.kind === "packed-item");
   if (packed.length === 0) return world;
+
+  const scoreEntity = world.entities.find((e) => e.kind === "score");
+  if (!scoreEntity?.score) return world;
 
   let boxValue = 0;
   packed.forEach((entity) => {
@@ -57,10 +63,17 @@ function shipBox(world: GameWorld): GameWorld {
     ...world,
     global: {
       ...world.global,
-      score: world.global.score + boxValue,
-      hasBox: false,
       feedbackEffects: [...world.global.feedbackEffects, newFeedback],
     },
+    entities: world.entities.map((e) => {
+      if (e.kind === "score" && e.score) {
+        return { ...e, score: { ...e.score, value: e.score.value + boxValue } };
+      }
+      if (e.kind === "box" && e.box) {
+        return { ...e, box: { ...e.box, hasBox: false } };
+      }
+      return e;
+    }),
   };
 
   packed.forEach((p) => {
@@ -71,7 +84,11 @@ function shipBox(world: GameWorld): GameWorld {
 }
 
 function buyBox(world: GameWorld): GameWorld {
-  if (world.global.score < 200) {
+  const scoreEntity = world.entities.find((e) => e.kind === "score");
+  const pointer = world.entities.find((e) => e.kind === "pointer")?.pointer;
+  if (!scoreEntity?.score || !pointer) return world;
+
+  if (scoreEntity.score.value < 200) {
     const feedback = {
       text: "INSUFFICIENT FUNDS",
       x: 150,
@@ -104,30 +121,29 @@ function buyBox(world: GameWorld): GameWorld {
     ...world,
     global: {
       ...world.global,
-      score: world.global.score - 200,
-      hasBox: true,
       feedbackEffects: [...world.global.feedbackEffects, feedback],
     },
-  };
-
-  // Move the box to the mouse position
-  const box = newWorld.entities.find((e) => e.kind === "box");
-  if (box && box.transform && box.collision) {
-    const updatedEntities = newWorld.entities.map((e) => {
-      if (e.id === box.id) {
+    entities: world.entities.map((e) => {
+      if (e.kind === "score" && e.score) {
+        return { ...e, score: { ...e.score, value: e.score.value - 200 } };
+      }
+      if (e.kind === "box" && e.box && e.transform && e.collision) {
         return {
           ...e,
+          box: { ...e.box, hasBox: true },
           transform: {
-            ...e.transform!,
-            x: world.global.mouseX - box.collision!.width / 2,
-            y: world.global.mouseY - box.collision!.height / 2,
+            ...e.transform,
+            x: pointer.x - e.collision.width / 2,
+            y: pointer.y - e.collision.height / 2,
           },
         };
       }
+      if (e.kind === "conveyor" && e.conveyor) {
+        return { ...e, conveyor: { ...e.conveyor, isActive: true } };
+      }
       return e;
-    });
-    return { ...newWorld, entities: updatedEntities };
-  }
+    }),
+  };
 
   return newWorld;
 }

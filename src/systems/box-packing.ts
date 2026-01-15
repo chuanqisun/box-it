@@ -5,10 +5,8 @@ import { addEntity, removeEntity } from "../engine";
 const ITEM_SIZE = 45;
 
 export const boxPackingSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) => {
-  if (!world.global.hasBox) return world;
-
   const box = world.entities.find((entity) => entity.kind === "box");
-  if (!box?.transform || !box?.collision) return world;
+  if (!box?.transform || !box?.collision || !box?.box?.hasBox) return world;
 
   let currentWorld = world;
   const items = currentWorld.entities.filter((e) => e.kind === "item");

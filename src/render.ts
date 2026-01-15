@@ -13,12 +13,15 @@ export function drawWorld(ctx: CanvasRenderingContext2D, world: GameWorld) {
 
   drawZones(ctx, world);
 
-  if (world.global.hasBox) {
+  const boxEntity = world.entities.find((e) => e.kind === "box");
+  const pointer = world.entities.find((e) => e.kind === "pointer")?.pointer;
+
+  if (boxEntity?.box?.hasBox) {
     drawBox(ctx, world);
-  } else {
+  } else if (pointer) {
     ctx.fillStyle = "rgba(255,255,255,0.1)";
     ctx.beginPath();
-    ctx.arc(world.global.mouseX, world.global.mouseY, 20, 0, Math.PI * 2);
+    ctx.arc(pointer.x, pointer.y, 20, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = "rgba(255,255,255,0.3)";
     ctx.stroke();
@@ -30,22 +33,28 @@ export function drawWorld(ctx: CanvasRenderingContext2D, world: GameWorld) {
     if (item.itemState?.state === "falling") drawItem(ctx, item);
   });
 
-  drawConveyor(ctx, world);
+  const conveyor = world.entities.find((e) => e.kind === "conveyor" && e.conveyor)?.conveyor;
+  if (conveyor) {
+    drawConveyor(ctx, world, conveyor);
 
-  const beltX = (world.global.canvas.width - world.global.conveyor.width) / 2;
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(beltX, -100, world.global.conveyor.width, world.global.conveyor.length + 100);
-  ctx.clip();
-  items.forEach((item) => {
-    if (item.itemState?.state === "belt") drawItem(ctx, item);
-  });
-  ctx.restore();
+    const beltX = (world.global.canvas.width - conveyor.width) / 2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(beltX, -100, conveyor.width, conveyor.length + 100);
+    ctx.clip();
+    items.forEach((item) => {
+      if (item.itemState?.state === "belt") drawItem(ctx, item);
+    });
+    ctx.restore();
+  }
 
   drawFeedback(ctx, world.global.feedbackEffects);
 }
 
 function drawZones(ctx: CanvasRenderingContext2D, world: GameWorld) {
+  const boxEntity = world.entities.find((e) => e.kind === "box");
+  const hasBox = boxEntity?.box?.hasBox ?? false;
+
   world.entities
     .filter((e) => e.kind === "zone")
     .forEach((zone) => {
@@ -63,7 +72,7 @@ function drawZones(ctx: CanvasRenderingContext2D, world: GameWorld) {
         ctx.fillStyle = "#3498db";
         ctx.font = "bold 20px Arial";
         ctx.textAlign = "center";
-        if (!world.global.hasBox) {
+        if (!hasBox) {
           ctx.fillText("GET BOX", 0, -15);
           ctx.fillText("($200)", 0, 15);
           ctx.globalAlpha = (Math.sin(Date.now() / 200) + 1) / 4;
@@ -89,7 +98,7 @@ function drawZones(ctx: CanvasRenderingContext2D, world: GameWorld) {
         ctx.textAlign = "center";
 
         const packedCount = world.entities.filter((e) => e.kind === "packed-item").length;
-        if (world.global.hasBox && packedCount > 0) {
+        if (hasBox && packedCount > 0) {
           ctx.fillText("SHIP IT!", 0, -15);
           ctx.fillText(`(${packedCount} ITEMS)`, 0, 15);
           ctx.globalAlpha = (Math.sin(Date.now() / 200) + 1) / 4;
@@ -172,46 +181,46 @@ function drawBox(ctx: CanvasRenderingContext2D, world: GameWorld) {
   ctx.stroke();
 }
 
-function drawConveyor(ctx: CanvasRenderingContext2D, world: GameWorld) {
-  const beltX = (world.global.canvas.width - world.global.conveyor.width) / 2;
+function drawConveyor(ctx: CanvasRenderingContext2D, world: GameWorld, conveyor: NonNullable<GameEntity["conveyor"]>) {
+  const beltX = (world.global.canvas.width - conveyor.width) / 2;
 
   ctx.fillStyle = "rgba(0,0,0,0.6)";
-  ctx.fillRect(beltX + 20, world.global.conveyor.length, world.global.conveyor.width - 40, 40);
+  ctx.fillRect(beltX + 20, conveyor.length, conveyor.width - 40, 40);
 
   ctx.fillStyle = CONVEYOR_BORDER_COLOR;
-  ctx.fillRect(beltX - 15, -50, world.global.conveyor.width + 30, world.global.conveyor.length + 50);
+  ctx.fillRect(beltX - 15, -50, conveyor.width + 30, conveyor.length + 50);
 
   ctx.fillStyle = CONVEYOR_COLOR;
-  ctx.fillRect(beltX, -50, world.global.conveyor.width, world.global.conveyor.length + 50);
+  ctx.fillRect(beltX, -50, conveyor.width, conveyor.length + 50);
 
   ctx.save();
   ctx.beginPath();
-  ctx.rect(beltX, -50, world.global.conveyor.width, world.global.conveyor.length + 50);
+  ctx.rect(beltX, -50, conveyor.width, conveyor.length + 50);
   ctx.clip();
 
   ctx.strokeStyle = "#333";
   ctx.lineWidth = 5;
-  const timeOffset = (Date.now() / 4) % 80;
-  for (let y = -100; y < world.global.conveyor.length + 50; y += 80) {
+  const timeOffset = conveyor.offset;
+  for (let y = -100; y < conveyor.length + 50; y += 80) {
     const drawY = y + timeOffset;
     ctx.beginPath();
     ctx.moveTo(beltX, drawY - 20);
-    ctx.lineTo(beltX + world.global.conveyor.width / 2, drawY + 20);
-    ctx.lineTo(beltX + world.global.conveyor.width, drawY - 20);
+    ctx.lineTo(beltX + conveyor.width / 2, drawY + 20);
+    ctx.lineTo(beltX + conveyor.width, drawY - 20);
     ctx.stroke();
   }
   ctx.restore();
 
-  const gradient = ctx.createLinearGradient(0, world.global.conveyor.length - 15, 0, world.global.conveyor.length + 15);
+  const gradient = ctx.createLinearGradient(0, conveyor.length - 15, 0, conveyor.length + 15);
   gradient.addColorStop(0, "#444");
   gradient.addColorStop(0.5, "#777");
   gradient.addColorStop(1, "#444");
   ctx.fillStyle = gradient;
-  ctx.fillRect(beltX - 20, world.global.conveyor.length - 15, world.global.conveyor.width + 40, 30);
+  ctx.fillRect(beltX - 20, conveyor.length - 15, conveyor.width + 40, 30);
 
   ctx.fillStyle = "#d35400";
-  ctx.fillRect(beltX - 15, -50, 10, world.global.conveyor.length + 50);
-  ctx.fillRect(beltX + world.global.conveyor.width + 5, -50, 10, world.global.conveyor.length + 50);
+  ctx.fillRect(beltX - 15, -50, 10, conveyor.length + 50);
+  ctx.fillRect(beltX + conveyor.width + 5, -50, 10, conveyor.length + 50);
 }
 
 function drawItem(ctx: CanvasRenderingContext2D, item: GameEntity) {

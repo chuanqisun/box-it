@@ -1,8 +1,19 @@
-import type { GameEntity } from "../domain";
+import type { GameEntity, GameGlobal } from "../domain";
 import type { System } from "../engine";
 
-export const movementSystem: System<GameEntity, any> = (world, deltaTime) => {
+export const movementSystem: System<GameEntity, GameGlobal> = (world, deltaTime) => {
   const newEntities = world.entities.map((entity) => {
+    if (entity.kind === "conveyor" && entity.conveyor) {
+      const { isActive, offset, speed } = entity.conveyor;
+      return {
+        ...entity,
+        conveyor: {
+          ...entity.conveyor,
+          offset: isActive ? (offset + (speed * deltaTime) / 1000) % 80 : offset,
+        },
+      };
+    }
+
     if (entity.transform && entity.velocity) {
       return {
         ...entity,

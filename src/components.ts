@@ -34,6 +34,27 @@ export interface WithCollision {
 export interface WithScore {
   score: {
     value: number;
+    packedCount: number;
+  };
+}
+
+export interface WithBox {
+  box: {
+    hasBox: boolean;
+  };
+}
+
+export interface WithPointer {
+  pointer: {
+    x: number;
+    y: number;
+  };
+}
+
+export interface WithSpawner {
+  spawner: {
+    timer: number;
+    interval: number;
   };
 }
 
@@ -66,5 +87,15 @@ export interface WithQuality {
 export interface WithPhysical {
   physical: {
     size: number;
+  };
+}
+
+export interface WithConveyor {
+  conveyor: {
+    isActive: boolean;
+    offset: number;
+    speed: number;
+    width: number;
+    length: number;
   };
 }

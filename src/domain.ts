@@ -1,40 +1,48 @@
 import type {
+  WithBox,
   WithBoxAnchor,
   WithCollision,
+  WithConveyor,
   WithItemState,
   WithPhysical,
+  WithPointer,
   WithQuality,
   WithRender,
   WithScore,
+  WithSpawner,
   WithTransform,
   WithVelocity,
   WithZone,
 } from "./components";
 import type { World } from "./engine";
 
-export type EntityKind = "item" | "box" | "packed-item" | "zone";
+export type EntityKind = "item" | "box" | "packed-item" | "zone" | "conveyor" | "pointer" | "score";
 
 export type GameEntity = {
   id: number;
   kind: EntityKind;
-} & Partial<WithTransform & WithVelocity & WithRender & WithCollision & WithScore & WithItemState & WithZone & WithBoxAnchor & WithQuality & WithPhysical>;
+} & Partial<
+  WithTransform &
+    WithVelocity &
+    WithRender &
+    WithCollision &
+    WithScore &
+    WithItemState &
+    WithZone &
+    WithBoxAnchor &
+    WithQuality &
+    WithPhysical &
+    WithConveyor &
+    WithBox &
+    WithPointer &
+    WithSpawner
+>;
 
 export interface GameGlobal {
-  score: number;
-  hasBox: boolean;
-  spawnTimer: number;
-  spawnInterval: number;
-  packedCount: number;
-  mouseX: number;
-  mouseY: number;
   canvasEl: HTMLCanvasElement;
   canvas: {
     width: number;
     height: number;
-  };
-  conveyor: {
-    width: number;
-    length: number;
   };
   feedbackEffects: Array<{
     text: string;

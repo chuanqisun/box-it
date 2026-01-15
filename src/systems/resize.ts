@@ -15,9 +15,18 @@ export const resizeSystem = (world: World<GameEntity, GameGlobal>, width: number
     global: {
       ...world.global,
       canvas: { width, height },
-      conveyor: { width: conveyorWidth, length: conveyorLength },
     },
     entities: world.entities.map((e) => {
+      if (e.kind === "conveyor" && e.conveyor) {
+        return {
+          ...e,
+          conveyor: {
+            ...e.conveyor,
+            width: conveyorWidth,
+            length: conveyorLength,
+          },
+        };
+      }
       if (e.kind === "box" && e.transform && e.collision) {
         if (e.transform.x === 0 && e.transform.y === 0) {
           return {

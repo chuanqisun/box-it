@@ -4,6 +4,7 @@ import type { System } from "../engine";
 const ITEM_SPEED_FALL = 450;
 
 export const itemStateSystem: System<GameEntity, GameGlobal> = (world, deltaTime) => {
+  const conveyor = world.entities.find((e) => e.kind === "conveyor" && e.conveyor)?.conveyor;
   const newEntities = world.entities
     .map((entity) => {
       if (entity.kind !== "item" || !entity.itemState || !entity.transform || !entity.velocity) {
@@ -12,10 +13,10 @@ export const itemStateSystem: System<GameEntity, GameGlobal> = (world, deltaTime
 
       const item = entity;
       let { state, fallScale } = item.itemState!;
-      let { x, y } = item.transform!;
+      let { y } = item.transform!;
       let { x: vx, y: vy } = item.velocity!;
 
-      if (state === "belt" && y > world.global.conveyor.length) {
+      if (state === "belt" && conveyor && y > conveyor.length) {
         state = "falling";
         vy = ITEM_SPEED_FALL;
       }
