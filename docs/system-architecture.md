@@ -9,6 +9,7 @@
 - Game processes to increase speed and conflict among items
 - Fun factor in chaos
 - Blend genre of tetris, logic puzzle, and real-time strategy
+- Each level has a theme (sale, holiday, special event, crisis, etc)
 
 ## System Architecture
 
