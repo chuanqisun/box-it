@@ -1,3 +1,5 @@
+import { take } from "rxjs";
+import { createItemStream$, simulateInteractions$ } from "./ai/generate";
 import { initSettings } from "./ai/settings";
 import type { GameEntity, GameGlobal } from "./domain";
 import { createAnimationFrameDelta$, createResizeObserver$, World } from "./engine";
@@ -137,6 +139,21 @@ startMenu.showModal();
 
 startGameBtn.addEventListener("click", () => {
   startMenu.close();
+  const items$ = createItemStream$({ theme: "test run", count: 30 }).pipe(take(30));
+  items$.subscribe({
+    next: (item) => console.log("Generated item:", item),
+    error: (err) => console.error("Item generation error:", err),
+    complete: () => console.log("Item generation complete"),
+  });
+
+  simulateInteractions$(items$, 10)
+    .pipe(take(10))
+    .subscribe({
+      next: (interaction) => console.log("Generated interaction:", interaction),
+      error: (err) => console.error("Interaction generation error:", err),
+      complete: () => console.log("Interaction generation complete"),
+    });
+
   createAnimationFrameDelta$().subscribe((dt) => {
     world.runSystems(dt, systems).next();
     const scoreEntity = world.entities.find((e) => e.score);
