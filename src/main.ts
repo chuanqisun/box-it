@@ -1,5 +1,6 @@
 import { take } from "rxjs";
-import { createItemStream$, simulateInteractions$ } from "./ai/generate";
+import * as liveAI from "./ai/generate";
+import * as mockAI from "./ai/generate-mock";
 import { initSettings } from "./ai/settings";
 import type { GameEntity, GameGlobal } from "./domain";
 import { createAnimationFrameDelta$, createResizeObserver$, World } from "./engine";
@@ -15,6 +16,9 @@ import { spawningSystem } from "./systems/spawning";
 import { toolSystem } from "./systems/tool";
 import { zoneSystem } from "./systems/zone";
 import { initCalibrationLifecycle, initObjectTracking } from "./tracking/tracking";
+
+const isLive = new URLSearchParams(window.location.search).get("live") === "true";
+const { createItemStream$, simulateInteractions$ } = isLive ? liveAI : mockAI;
 
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
