@@ -1,6 +1,3 @@
-import { take } from "rxjs";
-import * as liveAI from "./ai/generate";
-import * as mockAI from "./ai/generate-mock";
 import { initSettings } from "./ai/settings";
 import type { GameEntity, GameGlobal } from "./domain";
 import { createAnimationFrameDelta$, createResizeObserver$, World } from "./engine";
@@ -9,6 +6,7 @@ import "./style.css";
 import { boxPackingSystem } from "./systems/box-packing";
 import { feedbackSystem } from "./systems/feedback";
 import { inputSystem } from "./systems/input";
+import { interactionSystem } from "./systems/interaction";
 import { itemStateSystem } from "./systems/item-state";
 import { movementSystem } from "./systems/movement";
 import { resizeSystem } from "./systems/resize";
@@ -16,9 +14,6 @@ import { spawningSystem } from "./systems/spawning";
 import { toolSystem } from "./systems/tool";
 import { zoneSystem } from "./systems/zone";
 import { initCalibrationLifecycle, initObjectTracking } from "./tracking/tracking";
-
-const isLive = new URLSearchParams(window.location.search).get("live") === "true";
-const { createItemStream$, simulateInteractions$ } = isLive ? liveAI : mockAI;
 
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
@@ -42,6 +37,7 @@ const initialGlobal: GameGlobal = {
 
 const world = new World<GameEntity, GameGlobal>(initialGlobal)
   .addEntity({ feedback: { effects: [] } })
+  .addEntity({ interactions: { rules: [] } })
   .addEntity({
     conveyor: {
       isActive: false,
@@ -50,7 +46,7 @@ const world = new World<GameEntity, GameGlobal>(initialGlobal)
       width: 300,
       length: window.innerHeight * 0.55,
     },
-    spawner: { timer: 0, interval: 1000 },
+    spawner: { timer: 0, interval: 1000, queue: [] },
   })
   .addEntity({
     transform: { x: 0, y: 0, rotation: 0, scale: 1 },
@@ -127,9 +123,16 @@ canvas.addEventListener(
   { passive: false }
 );
 
+const startConveyor = () => {
+  world
+    .updateEntities((entities) => entities.map((e) => (e.conveyor && !e.conveyor.isActive ? { ...e, conveyor: { ...e.conveyor, isActive: true } } : e)))
+    .next();
+};
+
 initObjectTracking(canvas, (id, x, y, rotation) => {
   if (id === "box") {
     handleInput(x, y, rotation);
+    startConveyor();
   }
   if (id === "tool1" || id === "tool2") {
     updateToolState(id, x, y, rotation);
@@ -137,27 +140,12 @@ initObjectTracking(canvas, (id, x, y, rotation) => {
 });
 
 // Game Loop
-const systems = [inputSystem, spawningSystem, movementSystem, itemStateSystem, boxPackingSystem, toolSystem, zoneSystem, feedbackSystem];
+const systems = [inputSystem, spawningSystem, movementSystem, itemStateSystem, boxPackingSystem, interactionSystem, toolSystem, zoneSystem, feedbackSystem];
 
 startMenu.showModal();
 
 startGameBtn.addEventListener("click", () => {
   startMenu.close();
-  const items$ = createItemStream$({ theme: "test run", count: 30 }).pipe(take(30));
-  items$.subscribe({
-    next: (item) => console.log("Generated item:", item),
-    error: (err) => console.error("Item generation error:", err),
-    complete: () => console.log("Item generation complete"),
-  });
-
-  simulateInteractions$(items$, 10)
-    .pipe(take(10))
-    .subscribe({
-      next: (interaction) => console.log("Generated interaction:", interaction),
-      error: (err) => console.error("Interaction generation error:", err),
-      complete: () => console.log("Interaction generation complete"),
-    });
-
   createAnimationFrameDelta$().subscribe((dt) => {
     world.runSystems(dt, systems).next();
     const scoreEntity = world.entities.find((e) => e.score);

@@ -4,7 +4,9 @@ import type {
   WithCollision,
   WithConveyor,
   WithFeedback,
+  WithInteractions,
   WithItemState,
+  WithName,
   WithPhysical,
   WithPointer,
   WithQuality,
@@ -24,6 +26,7 @@ export type GameEntity = {
   WithTransform &
     WithVelocity &
     WithRender &
+    WithName &
     WithCollision &
     WithScore &
     WithItemState &
@@ -35,10 +38,15 @@ export type GameEntity = {
     WithBox &
     WithPointer &
     WithFeedback &
+    WithInteractions &
     WithSpawner &
     WithTool
 >;
 
+/**
+ * Avoid adding data to GameGlobal. They are only used for DOM references
+ * Model all the data as Components and behavior as Systems
+ */
 export interface GameGlobal {
   canvasEl: HTMLCanvasElement;
   canvas: {

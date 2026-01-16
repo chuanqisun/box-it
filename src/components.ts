@@ -22,6 +22,17 @@ export interface WithRender {
   };
 }
 
+export interface ItemDescriptor {
+  name: string;
+  emoji: string;
+}
+
+export interface WithName {
+  name: {
+    value: string;
+  };
+}
+
 export interface WithCollision {
   collision: {
     width: number;
@@ -56,6 +67,20 @@ export interface WithSpawner {
   spawner: {
     timer: number;
     interval: number;
+    queue: ItemDescriptor[];
+  };
+}
+
+export interface InteractionRule {
+  itemOne: string;
+  itemTwo: string;
+  result: string;
+  effect: string;
+}
+
+export interface WithInteractions {
+  interactions: {
+    rules: InteractionRule[];
   };
 }
 

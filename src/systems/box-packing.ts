@@ -83,6 +83,7 @@ export const boxPackingSystem: System<GameEntity, GameGlobal> = (world, _deltaTi
     world.addEntity({
       transform: { x: relX, y: relY, rotation: -boxRotation, scale: 0 },
       render: { emoji: item.render?.emoji ?? "📦" },
+      name: item.name ? { ...item.name } : { value: item.render?.emoji ?? "📦" },
       collision: { width: ITEM_SIZE, height: ITEM_SIZE, type: "rectangle" },
       boxAnchor: { relX, relY },
       itemState: { state: "packed", fallScale: item.itemState.fallScale },
