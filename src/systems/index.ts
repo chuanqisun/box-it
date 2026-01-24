@@ -6,7 +6,7 @@
  *
  * - Input: Process player input
  * - Spawning: Create new entities
- * - Physics: Movement and collision
+ * - Physics: Movement
  * - State: Entity state management
  * - Interaction: Entity-entity interactions
  * - Feedback: Visual feedback effects
@@ -21,7 +21,6 @@ export { spawningSystem } from "./spawning";
 
 // Physics Systems
 export { movementSystem } from "./movement";
-export { collisionSystem, collisionEventSystem } from "./collision";
 
 // State Systems
 export { itemStateSystem } from "./item-state";
@@ -29,8 +28,6 @@ export { boxPackingSystem } from "./box-packing";
 
 // Interaction Systems
 export { interactionSystem } from "./interaction";
-export { toolSystem } from "./tool";
-export { toolEffectSystem } from "./tool-effect";
 export { zoneSystem } from "./zone";
 
 // Feedback Systems

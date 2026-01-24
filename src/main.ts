@@ -1,7 +1,7 @@
 /**
  * Main Application Entry Point
  *
- * This file is now focused solely on:
+ * This file is focused on:
  * - DOM element references
  * - Module initialization
  * - UI event handling
@@ -12,7 +12,6 @@
  * - input-handler.ts: Input handling
  * - systems/: Individual ECS systems
  * - entities/: Entity factories
- * - utils/: Shared utilities
  */
 
 import { initSettings } from "./ai/settings";
@@ -24,7 +23,6 @@ import "./style.css";
 
 // Systems
 import { boxPackingSystem } from "./systems/box-packing";
-import { collisionEventSystem } from "./systems/collision";
 import { feedbackSystem } from "./systems/feedback";
 import { gameStateSystem } from "./systems/game-state";
 import { inputSystem } from "./systems/input";
@@ -33,7 +31,6 @@ import { itemStateSystem } from "./systems/item-state";
 import { movementSystem } from "./systems/movement";
 import { resizeSystem } from "./systems/resize";
 import { spawningSystem } from "./systems/spawning";
-import { toolEffectSystem } from "./systems/tool-effect";
 import { zoneSystem } from "./systems/zone";
 import { initCalibrationLifecycle } from "./tracking/tracking";
 
@@ -77,23 +74,19 @@ inputHandler.init();
  * 1. Input processing
  * 2. Spawning new entities
  * 3. Movement and physics
- * 4. Collision detection
- * 5. State changes (item state, box packing)
- * 6. Interactions and effects
- * 7. Tool effects (responds to collisions)
- * 8. Zone actions
- * 9. Visual feedback
- * 10. Game state evaluation
+ * 4. State changes (item state, box packing)
+ * 5. Interactions
+ * 6. Zone actions
+ * 7. Visual feedback
+ * 8. Game state evaluation
  */
 const systems = [
   inputSystem,
   spawningSystem,
   movementSystem,
-  collisionEventSystem,  // Detect collisions first
   itemStateSystem,
   boxPackingSystem,
   interactionSystem,
-  toolEffectSystem,      // Apply tool effects after collision detection
   zoneSystem,
   feedbackSystem,
   gameStateSystem,

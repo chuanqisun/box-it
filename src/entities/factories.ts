@@ -87,11 +87,10 @@ export function createPointerEntity(): EntityData {
 export function createToolEntity(
   id: "tool1" | "tool2",
   x: number,
-  y: number,
-  effect?: { type: string; value?: unknown }
+  y: number
 ): EntityData {
   return {
-    tool: { id, isColliding: false, effect },
+    tool: { id, isColliding: false },
     transform: { x, y, rotation: 0, scale: 1 },
     collision: { width: TOOL_SIZE, height: TOOL_SIZE, type: "circle", radius: TOOL_SIZE / 2 },
   };

@@ -47,14 +47,12 @@ export function createGameWorld(config: GameInitConfig): World<GameEntity, GameG
     .addEntity(createZoneEntity("restock"))
     .addEntity(createZoneEntity("shipping"))
     .addEntity(createPointerEntity())
-    // Tools - positioned at corners, with optional effects for future use
+    // Tools - positioned at corners
     .addEntity(createToolEntity("tool1", 40, 40))
     .addEntity(createToolEntity("tool2", window.innerWidth - TOOL_SIZE - 40, 40))
     // Game state entities
     .addEntity(createScoreEntity(initialScore))
-    .addEntity(createGameStateEntity())
-    // Collision events entity for cross-system communication
-    .addEntity({ collisionEvents: { collisions: [] } });
+    .addEntity(createGameStateEntity());
 
   return world;
 }
@@ -85,9 +83,6 @@ export function resetGameWorld(world: World<GameEntity, GameGlobal>): void {
       }
       if (e.interactions) {
         return { ...e, interactions: { rules: [] } };
-      }
-      if (e.collisionEvents) {
-        return { ...e, collisionEvents: { collisions: [] } };
       }
       return e;
     })
