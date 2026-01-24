@@ -78,7 +78,11 @@ const VELOCITY_DECAY = 0.85; // decay factor for velocity when points are lost
 const PREDICTION_MAX_TIME_MS = 100; // max time in ms to predict position using velocity
 const PREDICTION_MAX_TIME_S = PREDICTION_MAX_TIME_MS / 1000; // same threshold in seconds for dt comparison
 
-export function getObjectEvents(rawEvents$: Observable<TouchEvent>, context: ObjectTrackingContext): Observable<ObjectUpdate> {
+export function getObjectEvents(
+  rawEvents$: Observable<TouchEvent>,
+  context: ObjectTrackingContext,
+  targetElement: HTMLElement
+): Observable<ObjectUpdate> {
   return new Observable<ObjectUpdate>((subscriber) => {
     const touchPoints = new Map<number, TouchPoint>();
     const objectStates = new Map<string, TrackedObjectState>(
@@ -99,8 +103,10 @@ export function getObjectEvents(rawEvents$: Observable<TouchEvent>, context: Obj
 
     const subscription = rawEvents$.subscribe((event) => {
       event.preventDefault();
-      const target = event.target as HTMLElement | null;
-      const rect = target?.getBoundingClientRect();
+      // Use the explicitly provided target element for consistent coordinate calculation
+      // This ensures we always use the same reference element (e.g., the canvas)
+      // rather than event.target which could be a child element
+      const rect = targetElement.getBoundingClientRect();
       const now = performance.now();
 
       if (event.type === "touchstart" || event.type === "touchmove") {
@@ -108,8 +114,8 @@ export function getObjectEvents(rawEvents$: Observable<TouchEvent>, context: Obj
           const touch = event.touches[i];
           touchPoints.set(touch.identifier, {
             id: touch.identifier,
-            x: rect ? touch.clientX - rect.left : touch.clientX,
-            y: rect ? touch.clientY - rect.top : touch.clientY,
+            x: touch.clientX - rect.left,
+            y: touch.clientY - rect.top,
           });
         }
       }

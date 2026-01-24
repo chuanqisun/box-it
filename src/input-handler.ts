@@ -40,7 +40,11 @@ export class InputHandler {
    */
   private setupMouseListeners(): void {
     this.canvas.addEventListener("mousemove", (e) => {
-      this.handlePointerInput(e.clientX, e.clientY);
+      // Convert from window-based clientX/clientY to element-based coordinates
+      const rect = this.canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      this.handlePointerInput(x, y);
     });
 
     this.canvas.addEventListener(

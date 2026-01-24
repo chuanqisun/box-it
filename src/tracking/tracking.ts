@@ -107,7 +107,8 @@ export async function initObjectTracking(
     if (knownObjects.length === 0) return;
 
     const rawEvents$ = getInputRawEvent$(canvas);
-    getObjectEvents(rawEvents$, { knownObjects }).subscribe((update: ObjectUpdate) => {
+    // Pass canvas as target element to ensure consistent coordinate system
+    getObjectEvents(rawEvents$, { knownObjects }, canvas).subscribe((update: ObjectUpdate) => {
       if (update.type === "down" || update.type === "move") {
         onUpdate(update.id, update.position.x, update.position.y, update.rotation, update.confidence, update.activePoints);
       }
