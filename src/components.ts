@@ -146,6 +146,11 @@ export interface WithTool {
   tool: {
     id: "tool1" | "tool2";
     isColliding: boolean;
+    /** Optional effect that triggers when tool collides with items */
+    effect?: {
+      type: string;
+      value?: unknown;
+    };
   };
 }
 
@@ -154,5 +159,19 @@ export interface WithGameState {
     status: "playing" | "won" | "lost";
     totalItemsSpawned: number;
     itemsProcessed: number;
+  };
+}
+
+/**
+ * Component for pending collision events.
+ * Used by collision system to communicate with other systems.
+ */
+export interface WithCollisionEvents {
+  collisionEvents: {
+    collisions: Array<{
+      entityId: number;
+      otherEntityId: number;
+      type: string;
+    }>;
   };
 }

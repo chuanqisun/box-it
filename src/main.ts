@@ -1,9 +1,30 @@
+/**
+ * Main Application Entry Point
+ *
+ * This file is now focused solely on:
+ * - DOM element references
+ * - Module initialization
+ * - UI event handling
+ *
+ * Game logic is organized into:
+ * - game-init.ts: World creation and reset
+ * - game-loop.ts: Game loop management
+ * - input-handler.ts: Input handling
+ * - systems/: Individual ECS systems
+ * - entities/: Entity factories
+ * - utils/: Shared utilities
+ */
+
 import { initSettings } from "./ai/settings";
-import type { GameEntity, GameGlobal } from "./domain";
-import { createAnimationFrameDelta$, createResizeObserver$, World } from "./engine";
-import { drawWorld } from "./render";
+import { createGameWorld, resetGameWorld } from "./game-init";
+import { GameLoop } from "./game-loop";
+import { InputHandler } from "./input-handler";
+import { createResizeObserver$ } from "./engine";
 import "./style.css";
+
+// Systems
 import { boxPackingSystem } from "./systems/box-packing";
+import { collisionEventSystem } from "./systems/collision";
 import { feedbackSystem } from "./systems/feedback";
 import { gameStateSystem } from "./systems/game-state";
 import { inputSystem } from "./systems/input";
@@ -12,10 +33,13 @@ import { itemStateSystem } from "./systems/item-state";
 import { movementSystem } from "./systems/movement";
 import { resizeSystem } from "./systems/resize";
 import { spawningSystem } from "./systems/spawning";
-import { toolSystem } from "./systems/tool";
+import { toolEffectSystem } from "./systems/tool-effect";
 import { zoneSystem } from "./systems/zone";
-import { initCalibrationLifecycle, initObjectTracking } from "./tracking/tracking";
-import { Subscription } from "rxjs";
+import { initCalibrationLifecycle } from "./tracking/tracking";
+
+// ============================================================================
+// DOM Elements
+// ============================================================================
 
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
@@ -29,137 +53,70 @@ const finalScoreEl = document.getElementById("finalScore")!;
 const itemsProcessedEl = document.getElementById("itemsProcessed")!;
 const restartGameBtn = document.getElementById("restartGame") as HTMLButtonElement;
 
+// ============================================================================
+// Initialization
+// ============================================================================
+
+// Initialize settings and calibration
 initSettings();
 initCalibrationLifecycle();
 
-const BOX_WIDTH = 180;
-const BOX_HEIGHT = 130;
-const ZONE_SIZE = 200;
-const TOOL_SIZE = 80;
+// Create game world
+const world = createGameWorld({ canvas });
 
-// Initial state
-const initialGlobal: GameGlobal = {
-  canvasEl: canvas,
-  canvas: { width: window.innerWidth, height: window.innerHeight },
-};
+// Set up input handling
+const inputHandler = new InputHandler(world, canvas);
+inputHandler.init();
 
-const world = new World<GameEntity, GameGlobal>(initialGlobal)
-  .addEntity({ feedback: { effects: [] } })
-  .addEntity({ interactions: { rules: [] } })
-  .addEntity({
-    conveyor: {
-      isActive: false,
-      offset: 0,
-      speed: 250,
-      width: 300,
-      length: window.innerHeight * 0.55,
-    },
-    spawner: { timer: 0, interval: 1000, queue: [] },
-  })
-  .addEntity({
-    transform: { x: 0, y: 0, rotation: 0, scale: 1 },
-    collision: { width: BOX_WIDTH, height: BOX_HEIGHT, type: "rectangle" },
-    render: { emoji: "📦" },
-    box: { hasBox: false },
-  })
-  .addEntity({
-    zone: { type: "restock" },
-    transform: { x: 0, y: 0, rotation: 0, scale: 1 },
-    collision: { width: ZONE_SIZE, height: ZONE_SIZE, type: "rectangle" },
-  })
-  .addEntity({
-    zone: { type: "shipping" },
-    transform: { x: 0, y: 0, rotation: 0, scale: 1 },
-    collision: { width: ZONE_SIZE, height: ZONE_SIZE, type: "rectangle" },
-  })
-  .addEntity({
-    pointer: { x: 0, y: 0, rotation: 0 },
-  })
-  .addEntity({
-    tool: { id: "tool1", isColliding: false },
-    transform: { x: 40, y: 40, rotation: 0, scale: 1 },
-    collision: { width: TOOL_SIZE, height: TOOL_SIZE, type: "circle", radius: TOOL_SIZE / 2 },
-  })
-  .addEntity({
-    tool: { id: "tool2", isColliding: false },
-    transform: { x: window.innerWidth - TOOL_SIZE - 40, y: 40, rotation: 0, scale: 1 },
-    collision: { width: TOOL_SIZE, height: TOOL_SIZE, type: "circle", radius: TOOL_SIZE / 2 },
-  })
-  .addEntity({
-    score: { value: 600, packedCount: 0 },
-  })
-  .addEntity({
-    gameState: { status: "playing", totalItemsSpawned: 0, itemsProcessed: 0 },
-  });
+// ============================================================================
+// Systems Configuration
+// ============================================================================
 
-// Input streams
-let pointerState = { x: 0, y: 0, rotation: 0 };
+/**
+ * Systems are organized in execution order:
+ * 1. Input processing
+ * 2. Spawning new entities
+ * 3. Movement and physics
+ * 4. Collision detection
+ * 5. State changes (item state, box packing)
+ * 6. Interactions and effects
+ * 7. Tool effects (responds to collisions)
+ * 8. Zone actions
+ * 9. Visual feedback
+ * 10. Game state evaluation
+ */
+const systems = [
+  inputSystem,
+  spawningSystem,
+  movementSystem,
+  collisionEventSystem,  // Detect collisions first
+  itemStateSystem,
+  boxPackingSystem,
+  interactionSystem,
+  toolEffectSystem,      // Apply tool effects after collision detection
+  zoneSystem,
+  feedbackSystem,
+  gameStateSystem,
+];
 
-const updatePointerState = (next: Partial<typeof pointerState>) => {
-  pointerState = { ...pointerState, ...next };
-  world.updateEntities((entities) => entities.map((e) => (e.pointer ? { ...e, pointer: { ...pointerState } } : e))).next();
-};
+// ============================================================================
+// Game Loop
+// ============================================================================
 
-const handleInput = (clientX: number, clientY: number, rotation = pointerState.rotation) => {
-  updatePointerState({ x: clientX, y: clientY, rotation });
-};
-
-const updateToolState = (toolId: "tool1" | "tool2", x: number, y: number, rotation: number) => {
-  world
-    .updateEntities((entities) =>
-      entities.map((e) => {
-        if (!e.tool || e.tool.id !== toolId || !e.transform || !e.collision) return e;
-        return {
-          ...e,
-          transform: {
-            ...e.transform,
-            x: x - e.collision.width / 2,
-            y: y - e.collision.height / 2,
-            rotation,
-          },
-        };
-      })
-    )
-    .next();
-};
-
-canvas.addEventListener("mousemove", (e) => handleInput(e.clientX, e.clientY));
-canvas.addEventListener(
-  "wheel",
-  (e) => {
-    e.preventDefault();
-    const rotationDelta = -e.deltaY * 0.002;
-    updatePointerState({ rotation: pointerState.rotation + rotationDelta });
+const gameLoop = new GameLoop(world, ctx, systems, {
+  onScoreUpdate: (score) => {
+    scoreEl.innerText = String(score);
   },
-  { passive: false }
-);
-
-const startConveyor = () => {
-  world
-    .updateEntities((entities) => entities.map((e) => (e.conveyor && !e.conveyor.isActive ? { ...e, conveyor: { ...e.conveyor, isActive: true } } : e)))
-    .next();
-};
-
-initObjectTracking(canvas, (id, x, y, rotation, confidence, activePoints) => {
-  // Only process updates with reasonable confidence (at least 1 active point)
-  if (confidence < 0.3 || activePoints === 0) return;
-
-  if (id === "box") {
-    handleInput(x, y, rotation);
-    startConveyor();
-  }
-  if (id === "tool1" || id === "tool2") {
-    updateToolState(id, x, y, rotation);
-  }
+  onGameEnd: (status, score, itemsProcessed) => {
+    showEndGameScreen(status, score, itemsProcessed);
+  },
 });
 
-// Game Loop
-const systems = [inputSystem, spawningSystem, movementSystem, itemStateSystem, boxPackingSystem, interactionSystem, toolSystem, zoneSystem, feedbackSystem, gameStateSystem];
+// ============================================================================
+// UI Functions
+// ============================================================================
 
-let gameLoopSubscription: Subscription | null = null;
-let lastGameStatus: "playing" | "won" | "lost" = "playing";
-
-function showEndGameScreen(status: "won" | "lost", score: number, itemsProcessed: number) {
+function showEndGameScreen(status: "won" | "lost", score: number, itemsProcessed: number): void {
   endGameMenu.classList.remove("won", "lost");
   endGameMenu.classList.add(status);
 
@@ -176,74 +133,14 @@ function showEndGameScreen(status: "won" | "lost", score: number, itemsProcessed
   endGameMenu.showModal();
 }
 
-function startGame() {
-  // Reset game state
-  world.updateEntities((entities) =>
-    entities.map((e) => {
-      if (e.gameState) {
-        return { ...e, gameState: { status: "playing" as const, totalItemsSpawned: 0, itemsProcessed: 0 } };
-      }
-      if (e.score) {
-        return { ...e, score: { value: 600, packedCount: 0 } };
-      }
-      if (e.box) {
-        return { ...e, box: { hasBox: false } };
-      }
-      if (e.conveyor) {
-        return { ...e, conveyor: { ...e.conveyor, isActive: false, offset: 0 } };
-      }
-      if (e.spawner) {
-        return { ...e, spawner: { ...e.spawner, timer: 0, queue: [] } };
-      }
-      if (e.feedback) {
-        return { ...e, feedback: { effects: [] } };
-      }
-      if (e.interactions) {
-        return { ...e, interactions: { rules: [] } };
-      }
-      return e;
-    })
-  );
-
-  // Remove all items
-  const itemsToRemove = world.entities.filter((e) => e.itemState || e.boxAnchor);
-  itemsToRemove.forEach((item) => world.removeEntity(item.id));
-
-  lastGameStatus = "playing";
-
-  // Cancel existing subscription if any
-  if (gameLoopSubscription) {
-    gameLoopSubscription.unsubscribe();
-  }
-
-  gameLoopSubscription = createAnimationFrameDelta$().subscribe((dt) => {
-    const gameStateEntity = world.entities.find((e) => e.gameState);
-    const currentStatus = gameStateEntity?.gameState?.status ?? "playing";
-
-    // Check if game just ended
-    if (currentStatus !== "playing" && lastGameStatus === "playing") {
-      lastGameStatus = currentStatus;
-      const scoreEntity = world.entities.find((e) => e.score);
-      const score = scoreEntity?.score?.value ?? 0;
-      const itemsProcessed = gameStateEntity?.gameState?.itemsProcessed ?? 0;
-
-      // Stop the game loop and show end screen
-      setTimeout(() => {
-        showEndGameScreen(currentStatus, score, itemsProcessed);
-      }, 500); // Small delay to let the player see the final state
-
-      return;
-    }
-
-    if (currentStatus === "playing") {
-      world.runSystems(dt, systems).next();
-      const scoreEntity = world.entities.find((e) => e.score);
-      scoreEl.innerText = String(scoreEntity?.score?.value ?? 0);
-    }
-
-    drawWorld(ctx, world);
-  });
+function startGame(): void {
+  resetGameWorld(world);
+  gameLoop.start();
 }
+
+// ============================================================================
+// Event Listeners
+// ============================================================================
 
 startMenu.showModal();
 
@@ -258,6 +155,7 @@ restartGameBtn.addEventListener("click", () => {
   window.location.reload();
 });
 
+// Handle window resize
 createResizeObserver$().subscribe(({ width, height }) => {
   resizeSystem(world, width, height);
   world.next();
