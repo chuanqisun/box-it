@@ -449,7 +449,10 @@ export class CalibrationElement extends HTMLElement {
     const sc = c * scale;
 
     // Use law of cosines to find angles
-    const angleAtC = Math.acos((sa * sa + sb * sb - sc * sc) / (2 * sa * sb));
+    // Clamp the argument to [-1, 1] to handle floating point errors and invalid triangles
+    const cosArg = (sa * sa + sb * sb - sc * sc) / (2 * sa * sb);
+    const clampedCosArg = Math.max(-1, Math.min(1, cosArg));
+    const angleAtC = Math.acos(clampedCosArg);
 
     // Position vertices
     const p1 = { x: 100, y: 70 };

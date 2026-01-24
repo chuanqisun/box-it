@@ -75,7 +75,8 @@ interface TrackedObjectState {
 const SIGNATURE_TOLERANCE_RATIO = 0.35; // avg relative error allowed for side length matching (soft cap)
 const MATCH_DISTANCE_RATIO = 0.6; // max distance ratio for reusing missing touch points
 const VELOCITY_DECAY = 0.85; // decay factor for velocity when points are lost
-const PREDICTION_MAX_TIME_MS = 100; // max time to predict position using velocity
+const PREDICTION_MAX_TIME_MS = 100; // max time in ms to predict position using velocity
+const PREDICTION_MAX_TIME_S = PREDICTION_MAX_TIME_MS / 1000; // same threshold in seconds for dt comparison
 
 export function getObjectEvents(rawEvents$: Observable<TouchEvent>, context: ObjectTrackingContext): Observable<ObjectUpdate> {
   return new Observable<ObjectUpdate>((subscriber) => {
@@ -261,7 +262,7 @@ function updateObjectState(
     }
 
     // No points matched - use pure prediction for a limited time
-    if (dt > 0 && dt * 1000 < PREDICTION_MAX_TIME_MS) {
+    if (dt > 0 && dt < PREDICTION_MAX_TIME_S) {
       const predictedPosition = {
         x: state.position!.x + state.velocity.x * dt,
         y: state.position!.y + state.velocity.y * dt,
@@ -474,8 +475,8 @@ function getDistance(a: { x: number; y: number }, b: { x: number; y: number }): 
 }
 
 function normalizeAngle(angle: number): number {
-  let normalized = angle;
-  while (normalized > Math.PI) normalized -= Math.PI * 2;
-  while (normalized < -Math.PI) normalized += Math.PI * 2;
-  return normalized;
+  // Use modulo arithmetic for efficient normalization without loops
+  const TWO_PI = Math.PI * 2;
+  const normalized = ((angle % TWO_PI) + TWO_PI) % TWO_PI;
+  return normalized > Math.PI ? normalized - TWO_PI : normalized;
 }
