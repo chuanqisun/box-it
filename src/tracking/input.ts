@@ -11,9 +11,22 @@ export interface ObjectTrackingContext {
   knownObjects: KnownObject[];
 }
 
+/**
+ * Represents a registered object with its touch signature and bounding box properties.
+ * The 3-point touch signature defines a triangle, and the bounding box is positioned
+ * relative to that triangle.
+ */
 export interface KnownObject {
   id: string;
-  sides: [number, number, number]; // lengths of the 3 sides, incrementally sorted
+  /** Lengths of the 3 sides of the touch triangle, sorted in ascending order */
+  sides: [number, number, number];
+  /** Bounding box width (perpendicular to the primary axis) */
+  boundingBox?: {
+    width: number;
+    height: number;
+    /** Rotation offset in radians from the longest edge of the triangle */
+    orientationOffset: number;
+  };
 }
 
 export interface ObjectUpdate {
@@ -21,6 +34,10 @@ export interface ObjectUpdate {
   type: "down" | "move" | "up";
   position: { x: number; y: number };
   rotation: number;
+  /** Confidence level: 1.0 = all 3 points, 0.67 = 2 points, 0.33 = 1 point */
+  confidence: number;
+  /** Number of currently active touch points for this object */
+  activePoints: number;
 }
 
 interface TouchPoint {
@@ -29,29 +46,61 @@ interface TouchPoint {
   y: number;
 }
 
+/** Confidence levels for different contact point scenarios */
+const CONFIDENCE = {
+  THREE_POINTS: 1.0,
+  TWO_POINTS: 0.67,
+  ONE_POINT: 0.33,
+  PRESERVED: 0.1,
+} as const;
+
 interface TrackedObjectState {
   id: string;
   signature: [number, number, number];
+  /** The 3 reconstructed/tracked points (may include predicted positions) */
   points?: [TouchPoint, TouchPoint, TouchPoint];
+  /** Which point indices are currently backed by real touches */
+  activePointIndices: Set<number>;
+  /** Last known touch IDs for each point position */
+  touchIds: [number | null, number | null, number | null];
   position?: { x: number; y: number };
   rotation?: number;
+  /** Velocity for motion prediction */
+  velocity: { x: number; y: number; rotation: number };
+  confidence: number;
   isActive: boolean;
+  lastUpdateTime: number;
 }
 
 const SIGNATURE_TOLERANCE_RATIO = 0.35; // avg relative error allowed for side length matching (soft cap)
 const MATCH_DISTANCE_RATIO = 0.6; // max distance ratio for reusing missing touch points
+const VELOCITY_DECAY = 0.85; // decay factor for velocity when points are lost
+const PREDICTION_MAX_TIME_MS = 100; // max time to predict position using velocity
 
 export function getObjectEvents(rawEvents$: Observable<TouchEvent>, context: ObjectTrackingContext): Observable<ObjectUpdate> {
   return new Observable<ObjectUpdate>((subscriber) => {
     const touchPoints = new Map<number, TouchPoint>();
     const objectStates = new Map<string, TrackedObjectState>(
-      context.knownObjects.map((obj) => [obj.id, { id: obj.id, signature: obj.sides, isActive: false }])
+      context.knownObjects.map((obj) => [
+        obj.id,
+        {
+          id: obj.id,
+          signature: obj.sides,
+          isActive: false,
+          activePointIndices: new Set(),
+          touchIds: [null, null, null],
+          velocity: { x: 0, y: 0, rotation: 0 },
+          confidence: 0,
+          lastUpdateTime: 0,
+        },
+      ])
     );
 
     const subscription = rawEvents$.subscribe((event) => {
       event.preventDefault();
       const target = event.target as HTMLElement | null;
       const rect = target?.getBoundingClientRect();
+      const now = performance.now();
 
       if (event.type === "touchstart" || event.type === "touchmove") {
         for (let i = 0; i < event.touches.length; i++) {
@@ -71,7 +120,7 @@ export function getObjectEvents(rawEvents$: Observable<TouchEvent>, context: Obj
         }
       }
 
-      const updates = computeObjectUpdates(Array.from(touchPoints.values()), objectStates);
+      const updates = computeObjectUpdates(Array.from(touchPoints.values()), objectStates, now);
       updates.forEach((update) => subscriber.next(update));
     });
 
@@ -79,93 +128,292 @@ export function getObjectEvents(rawEvents$: Observable<TouchEvent>, context: Obj
   });
 }
 
-function computeObjectUpdates(touches: TouchPoint[], objectStates: Map<string, TrackedObjectState>): ObjectUpdate[] {
+function computeObjectUpdates(
+  touches: TouchPoint[],
+  objectStates: Map<string, TrackedObjectState>,
+  now: number
+): ObjectUpdate[] {
   const updates: ObjectUpdate[] = [];
   const usedTouchIds = new Set<number>();
-  const assignments = assignTouchesToObjects(touches, objectStates, usedTouchIds);
 
-  for (const state of objectStates.values()) {
-    const assignedTouches = assignments.get(state.id);
-    let nextPoints = state.points;
-    let hasMatch = false;
+  // Sort states by confidence to give priority to high-confidence objects
+  const sortedStates = Array.from(objectStates.values()).sort((a, b) => b.confidence - a.confidence);
 
-    if (assignedTouches) {
-      nextPoints = state.points
-        ? mergeTouchesWithPoints(state.points, assignedTouches)
-        : (assignedTouches.map((touch) => ({ ...touch })) as [TouchPoint, TouchPoint, TouchPoint]);
-      hasMatch = true;
-    } else if (state.points) {
-      const { points, matchedIds } = updatePointsFromNearbyTouches(state.points, state.signature, touches, usedTouchIds);
-      if (matchedIds.size > 0) {
-        matchedIds.forEach((id) => usedTouchIds.add(id));
-        nextPoints = points;
-        hasMatch = true;
-      }
-    }
+  for (const state of sortedStates) {
+    const result = updateObjectState(state, touches, usedTouchIds, now);
 
-    if (hasMatch && nextPoints) {
-      const position = getCentroid(nextPoints);
-      const rotation = getRotation(nextPoints, state.rotation);
-      const type = state.isActive ? "move" : "down";
-
-      state.points = nextPoints;
-      state.position = position;
-      state.rotation = rotation;
-      state.isActive = true;
-
-      updates.push({
-        id: state.id,
-        type,
-        position,
-        rotation,
-      });
-      continue;
-    }
-
-    if (state.isActive) {
+    if (result) {
+      updates.push(result);
+    } else if (state.isActive) {
+      // Object was active but now has no input - preserve last state with low confidence
       updates.push({
         id: state.id,
         type: "up",
         position: state.position ?? { x: 0, y: 0 },
         rotation: state.rotation ?? 0,
+        confidence: CONFIDENCE.PRESERVED,
+        activePoints: 0,
       });
+      state.isActive = false;
+      state.confidence = CONFIDENCE.PRESERVED;
     }
-
-    state.isActive = false;
   }
 
   return updates;
 }
 
-function assignTouchesToObjects(touches: TouchPoint[], objectStates: Map<string, TrackedObjectState>, usedTouchIds: Set<number>): Map<string, TouchPoint[]> {
-  const assignments = new Map<string, TouchPoint[]>();
-  if (touches.length < 3) return assignments;
+function updateObjectState(
+  state: TrackedObjectState,
+  touches: TouchPoint[],
+  usedTouchIds: Set<number>,
+  now: number
+): ObjectUpdate | null {
+  const dt = state.lastUpdateTime > 0 ? (now - state.lastUpdateTime) / 1000 : 0;
 
-  const candidates: Array<{ objectId: string; points: TouchPoint[]; score: number }> = [];
-  const combinations = buildTouchCombinations(touches);
+  // Try to find a 3-point match first (highest confidence)
+  const threePointMatch = findThreePointMatch(state, touches, usedTouchIds);
+  if (threePointMatch) {
+    const { points, touchIds } = threePointMatch;
 
-  for (const state of objectStates.values()) {
-    for (const combo of combinations) {
-      const signatureScore = getSignatureScore(combo, state.signature);
-      const center = getCentroid(combo);
-      const distancePenalty = state.position ? getDistance(center, state.position) / Math.max(...state.signature) : 0;
-      const score = signatureScore + distancePenalty * 0.35;
-      if (signatureScore <= SIGNATURE_TOLERANCE_RATIO) {
-        candidates.push({ objectId: state.id, points: combo, score });
-      }
+    // Mark touches as used
+    touchIds.forEach((id) => usedTouchIds.add(id));
+
+    // Calculate new position and rotation
+    const newPosition = getCentroid(points);
+    const newRotation = getRotation(points, state.rotation);
+
+    // Update velocity based on position change
+    if (state.position && dt > 0) {
+      state.velocity = {
+        x: (newPosition.x - state.position.x) / dt,
+        y: (newPosition.y - state.position.y) / dt,
+        rotation: normalizeAngle(newRotation - (state.rotation ?? newRotation)) / dt,
+      };
+    }
+
+    const type = state.isActive ? "move" : "down";
+
+    state.points = points;
+    state.touchIds = [touchIds[0], touchIds[1], touchIds[2]];
+    state.activePointIndices = new Set([0, 1, 2]);
+    state.position = newPosition;
+    state.rotation = newRotation;
+    state.confidence = CONFIDENCE.THREE_POINTS;
+    state.isActive = true;
+    state.lastUpdateTime = now;
+
+    return {
+      id: state.id,
+      type,
+      position: newPosition,
+      rotation: newRotation,
+      confidence: CONFIDENCE.THREE_POINTS,
+      activePoints: 3,
+    };
+  }
+
+  // If we have previous state, try to match with fewer points
+  if (state.points && state.isActive) {
+    const partialMatch = findPartialMatch(state, touches, usedTouchIds);
+
+    if (partialMatch && partialMatch.matchedCount > 0) {
+      const { updatedPoints, matchedIndices, matchedTouchIds } = partialMatch;
+
+      // Mark touches as used
+      matchedTouchIds.forEach((id) => usedTouchIds.add(id));
+
+      // Update the matched points, keep others predicted
+      const predictedPoints = predictUnmatchedPoints(
+        updatedPoints,
+        matchedIndices,
+        state.velocity,
+        dt
+      );
+
+      const newPosition = getCentroid(predictedPoints);
+      const newRotation = getRotation(predictedPoints, state.rotation);
+
+      // Decay velocity when using prediction
+      state.velocity = {
+        x: state.velocity.x * VELOCITY_DECAY,
+        y: state.velocity.y * VELOCITY_DECAY,
+        rotation: state.velocity.rotation * VELOCITY_DECAY,
+      };
+
+      const confidence =
+        partialMatch.matchedCount === 2 ? CONFIDENCE.TWO_POINTS : CONFIDENCE.ONE_POINT;
+
+      state.points = predictedPoints;
+      state.activePointIndices = matchedIndices;
+      state.position = newPosition;
+      state.rotation = newRotation;
+      state.confidence = confidence;
+      state.lastUpdateTime = now;
+
+      return {
+        id: state.id,
+        type: "move",
+        position: newPosition,
+        rotation: newRotation,
+        confidence,
+        activePoints: partialMatch.matchedCount,
+      };
+    }
+
+    // No points matched - use pure prediction for a limited time
+    if (dt > 0 && dt * 1000 < PREDICTION_MAX_TIME_MS) {
+      const predictedPosition = {
+        x: state.position!.x + state.velocity.x * dt,
+        y: state.position!.y + state.velocity.y * dt,
+      };
+      const predictedRotation = state.rotation! + state.velocity.rotation * dt;
+
+      // Decay velocity
+      state.velocity = {
+        x: state.velocity.x * VELOCITY_DECAY,
+        y: state.velocity.y * VELOCITY_DECAY,
+        rotation: state.velocity.rotation * VELOCITY_DECAY,
+      };
+
+      state.position = predictedPosition;
+      state.rotation = predictedRotation;
+      state.confidence = CONFIDENCE.PRESERVED;
+      state.activePointIndices = new Set();
+      state.lastUpdateTime = now;
+
+      return {
+        id: state.id,
+        type: "move",
+        position: predictedPosition,
+        rotation: predictedRotation,
+        confidence: CONFIDENCE.PRESERVED,
+        activePoints: 0,
+      };
     }
   }
 
-  candidates.sort((a, b) => a.score - b.score);
+  return null;
+}
 
-  for (const candidate of candidates) {
-    if (assignments.has(candidate.objectId)) continue;
-    if (candidate.points.some((point) => usedTouchIds.has(point.id))) continue;
-    assignments.set(candidate.objectId, candidate.points);
-    candidate.points.forEach((point) => usedTouchIds.add(point.id));
+function findThreePointMatch(
+  state: TrackedObjectState,
+  touches: TouchPoint[],
+  usedTouchIds: Set<number>
+): { points: [TouchPoint, TouchPoint, TouchPoint]; touchIds: [number, number, number] } | null {
+  if (touches.length < 3) return null;
+
+  const availableTouches = touches.filter((t) => !usedTouchIds.has(t.id));
+  if (availableTouches.length < 3) return null;
+
+  const combinations = buildTouchCombinations(availableTouches);
+  let bestMatch: {
+    points: [TouchPoint, TouchPoint, TouchPoint];
+    touchIds: [number, number, number];
+    score: number;
+  } | null = null;
+
+  for (const combo of combinations) {
+    const signatureScore = getSignatureScore(combo, state.signature);
+    if (signatureScore > SIGNATURE_TOLERANCE_RATIO) continue;
+
+    // Add distance penalty if we have a previous position
+    const center = getCentroid(combo);
+    const distancePenalty = state.position
+      ? getDistance(center, state.position) / Math.max(...state.signature)
+      : 0;
+    const totalScore = signatureScore + distancePenalty * 0.35;
+
+    if (!bestMatch || totalScore < bestMatch.score) {
+      bestMatch = {
+        points: combo as [TouchPoint, TouchPoint, TouchPoint],
+        touchIds: [combo[0].id, combo[1].id, combo[2].id],
+        score: totalScore,
+      };
+    }
   }
 
-  return assignments;
+  return bestMatch;
+}
+
+function findPartialMatch(
+  state: TrackedObjectState,
+  touches: TouchPoint[],
+  usedTouchIds: Set<number>
+): {
+  updatedPoints: [TouchPoint, TouchPoint, TouchPoint];
+  matchedIndices: Set<number>;
+  matchedTouchIds: Set<number>;
+  matchedCount: number;
+} | null {
+  if (!state.points) return null;
+
+  const availableTouches = touches.filter((t) => !usedTouchIds.has(t.id));
+  if (availableTouches.length === 0) return null;
+
+  const maxDistance = Math.max(...state.signature) * MATCH_DISTANCE_RATIO;
+  const updatedPoints = state.points.map((p) => ({ ...p })) as [TouchPoint, TouchPoint, TouchPoint];
+  const matchedIndices = new Set<number>();
+  const matchedTouchIds = new Set<number>();
+  const usedIndices = new Set<number>();
+
+  // Sort touches by proximity to any of the existing points
+  const touchWithBestMatch = availableTouches
+    .map((touch) => {
+      let bestDist = Infinity;
+      let bestIndex = -1;
+      for (let i = 0; i < state.points!.length; i++) {
+        if (usedIndices.has(i)) continue;
+        const dist = getDistance(touch, state.points![i]);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestIndex = i;
+        }
+      }
+      return { touch, bestDist, bestIndex };
+    })
+    .filter((m) => m.bestDist <= maxDistance)
+    .sort((a, b) => a.bestDist - b.bestDist);
+
+  for (const match of touchWithBestMatch) {
+    if (usedIndices.has(match.bestIndex)) continue;
+
+    updatedPoints[match.bestIndex] = { ...match.touch };
+    matchedIndices.add(match.bestIndex);
+    matchedTouchIds.add(match.touch.id);
+    usedIndices.add(match.bestIndex);
+  }
+
+  if (matchedIndices.size === 0) return null;
+
+  return {
+    updatedPoints,
+    matchedIndices,
+    matchedTouchIds,
+    matchedCount: matchedIndices.size,
+  };
+}
+
+function predictUnmatchedPoints(
+  points: [TouchPoint, TouchPoint, TouchPoint],
+  matchedIndices: Set<number>,
+  velocity: { x: number; y: number },
+  dt: number
+): [TouchPoint, TouchPoint, TouchPoint] {
+  // For unmatched points, apply the same translation as the matched points would suggest
+  // This keeps the triangle shape consistent
+  const result = points.map((p, i) => {
+    if (matchedIndices.has(i)) {
+      return p; // Already updated with real touch
+    }
+    // Apply velocity-based prediction
+    return {
+      ...p,
+      x: p.x + velocity.x * dt,
+      y: p.y + velocity.y * dt,
+    };
+  }) as [TouchPoint, TouchPoint, TouchPoint];
+
+  return result;
 }
 
 function buildTouchCombinations(touches: TouchPoint[]): TouchPoint[][] {
@@ -178,64 +426,6 @@ function buildTouchCombinations(touches: TouchPoint[]): TouchPoint[][] {
     }
   }
   return combinations;
-}
-
-function mergeTouchesWithPoints(previous: [TouchPoint, TouchPoint, TouchPoint], touches: TouchPoint[]): [TouchPoint, TouchPoint, TouchPoint] {
-  const updated = previous.map((point) => ({ ...point })) as [TouchPoint, TouchPoint, TouchPoint];
-  const usedIndices = new Set<number>();
-
-  for (const touch of touches) {
-    let bestIndex = -1;
-    let bestDistance = Number.POSITIVE_INFINITY;
-    for (let i = 0; i < updated.length; i++) {
-      if (usedIndices.has(i)) continue;
-      const distance = getDistance(touch, updated[i]);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestIndex = i;
-      }
-    }
-    if (bestIndex >= 0) {
-      updated[bestIndex] = { ...touch };
-      usedIndices.add(bestIndex);
-    }
-  }
-
-  return updated;
-}
-
-function updatePointsFromNearbyTouches(
-  points: [TouchPoint, TouchPoint, TouchPoint],
-  signature: [number, number, number],
-  touches: TouchPoint[],
-  usedTouchIds: Set<number>
-): { points: [TouchPoint, TouchPoint, TouchPoint]; matchedIds: Set<number> } {
-  const matchedIds = new Set<number>();
-  const updated = points.map((point) => ({ ...point })) as [TouchPoint, TouchPoint, TouchPoint];
-  const maxDistance = Math.max(...signature) * MATCH_DISTANCE_RATIO;
-  const availableTouches = touches.filter((touch) => !usedTouchIds.has(touch.id));
-  const usedIndices = new Set<number>();
-
-  for (const touch of availableTouches) {
-    let bestIndex = -1;
-    let bestDistance = Number.POSITIVE_INFINITY;
-    for (let i = 0; i < updated.length; i++) {
-      if (usedIndices.has(i)) continue;
-      const distance = getDistance(touch, updated[i]);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestIndex = i;
-      }
-    }
-
-    if (bestIndex >= 0 && bestDistance <= maxDistance) {
-      updated[bestIndex] = { ...touch };
-      matchedIds.add(touch.id);
-      usedIndices.add(bestIndex);
-    }
-  }
-
-  return { points: updated, matchedIds };
 }
 
 function getSignatureScore(points: TouchPoint[], signature: [number, number, number]): number {

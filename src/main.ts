@@ -129,7 +129,10 @@ const startConveyor = () => {
     .next();
 };
 
-initObjectTracking(canvas, (id, x, y, rotation) => {
+initObjectTracking(canvas, (id, x, y, rotation, confidence, activePoints) => {
+  // Only process updates with reasonable confidence (at least 1 active point)
+  if (confidence < 0.3 || activePoints === 0) return;
+
   if (id === "box") {
     handleInput(x, y, rotation);
     startConveyor();
