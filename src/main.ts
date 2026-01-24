@@ -5,6 +5,7 @@ import { drawWorld } from "./render";
 import "./style.css";
 import { boxPackingSystem } from "./systems/box-packing";
 import { feedbackSystem } from "./systems/feedback";
+import { gameStateSystem } from "./systems/game-state";
 import { inputSystem } from "./systems/input";
 import { interactionSystem } from "./systems/interaction";
 import { itemStateSystem } from "./systems/item-state";
@@ -14,12 +15,19 @@ import { spawningSystem } from "./systems/spawning";
 import { toolSystem } from "./systems/tool";
 import { zoneSystem } from "./systems/zone";
 import { initCalibrationLifecycle, initObjectTracking } from "./tracking/tracking";
+import { Subscription } from "rxjs";
 
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
 const scoreEl = document.getElementById("score")!;
 const startMenu = document.getElementById("startMenu") as HTMLDialogElement;
 const startGameBtn = document.getElementById("startGame") as HTMLButtonElement;
+const endGameMenu = document.getElementById("endGameMenu") as HTMLDialogElement;
+const endGameTitle = document.getElementById("endGameTitle")!;
+const endGameMessage = document.getElementById("endGameMessage")!;
+const finalScoreEl = document.getElementById("finalScore")!;
+const itemsProcessedEl = document.getElementById("itemsProcessed")!;
+const restartGameBtn = document.getElementById("restartGame") as HTMLButtonElement;
 
 initSettings();
 initCalibrationLifecycle();
@@ -79,6 +87,9 @@ const world = new World<GameEntity, GameGlobal>(initialGlobal)
   })
   .addEntity({
     score: { value: 600, packedCount: 0 },
+  })
+  .addEntity({
+    gameState: { status: "playing", totalItemsSpawned: 0, itemsProcessed: 0 },
   });
 
 // Input streams
@@ -143,18 +154,108 @@ initObjectTracking(canvas, (id, x, y, rotation, confidence, activePoints) => {
 });
 
 // Game Loop
-const systems = [inputSystem, spawningSystem, movementSystem, itemStateSystem, boxPackingSystem, interactionSystem, toolSystem, zoneSystem, feedbackSystem];
+const systems = [inputSystem, spawningSystem, movementSystem, itemStateSystem, boxPackingSystem, interactionSystem, toolSystem, zoneSystem, feedbackSystem, gameStateSystem];
+
+let gameLoopSubscription: Subscription | null = null;
+let lastGameStatus: "playing" | "won" | "lost" = "playing";
+
+function showEndGameScreen(status: "won" | "lost", score: number, itemsProcessed: number) {
+  endGameMenu.classList.remove("won", "lost");
+  endGameMenu.classList.add(status);
+
+  if (status === "won") {
+    endGameTitle.textContent = "🎉 Shift Complete!";
+    endGameMessage.textContent = "Great job! You processed all the items!";
+  } else {
+    endGameTitle.textContent = "💸 Bankrupt!";
+    endGameMessage.textContent = "You ran out of funds and couldn't afford a new box.";
+  }
+
+  finalScoreEl.textContent = `$${score}`;
+  itemsProcessedEl.textContent = String(itemsProcessed);
+  endGameMenu.showModal();
+}
+
+function startGame() {
+  // Reset game state
+  world.updateEntities((entities) =>
+    entities.map((e) => {
+      if (e.gameState) {
+        return { ...e, gameState: { status: "playing" as const, totalItemsSpawned: 0, itemsProcessed: 0 } };
+      }
+      if (e.score) {
+        return { ...e, score: { value: 600, packedCount: 0 } };
+      }
+      if (e.box) {
+        return { ...e, box: { hasBox: false } };
+      }
+      if (e.conveyor) {
+        return { ...e, conveyor: { ...e.conveyor, isActive: false, offset: 0 } };
+      }
+      if (e.spawner) {
+        return { ...e, spawner: { ...e.spawner, timer: 0, queue: [] } };
+      }
+      if (e.feedback) {
+        return { ...e, feedback: { effects: [] } };
+      }
+      if (e.interactions) {
+        return { ...e, interactions: { rules: [] } };
+      }
+      return e;
+    })
+  );
+
+  // Remove all items
+  const itemsToRemove = world.entities.filter((e) => e.itemState || e.boxAnchor);
+  itemsToRemove.forEach((item) => world.removeEntity(item.id));
+
+  lastGameStatus = "playing";
+
+  // Cancel existing subscription if any
+  if (gameLoopSubscription) {
+    gameLoopSubscription.unsubscribe();
+  }
+
+  gameLoopSubscription = createAnimationFrameDelta$().subscribe((dt) => {
+    const gameStateEntity = world.entities.find((e) => e.gameState);
+    const currentStatus = gameStateEntity?.gameState?.status ?? "playing";
+
+    // Check if game just ended
+    if (currentStatus !== "playing" && lastGameStatus === "playing") {
+      lastGameStatus = currentStatus;
+      const scoreEntity = world.entities.find((e) => e.score);
+      const score = scoreEntity?.score?.value ?? 0;
+      const itemsProcessed = gameStateEntity?.gameState?.itemsProcessed ?? 0;
+
+      // Stop the game loop and show end screen
+      setTimeout(() => {
+        showEndGameScreen(currentStatus, score, itemsProcessed);
+      }, 500); // Small delay to let the player see the final state
+
+      return;
+    }
+
+    if (currentStatus === "playing") {
+      world.runSystems(dt, systems).next();
+      const scoreEntity = world.entities.find((e) => e.score);
+      scoreEl.innerText = String(scoreEntity?.score?.value ?? 0);
+    }
+
+    drawWorld(ctx, world);
+  });
+}
 
 startMenu.showModal();
 
 startGameBtn.addEventListener("click", () => {
   startMenu.close();
-  createAnimationFrameDelta$().subscribe((dt) => {
-    world.runSystems(dt, systems).next();
-    const scoreEntity = world.entities.find((e) => e.score);
-    scoreEl.innerText = String(scoreEntity?.score?.value ?? 0);
-    drawWorld(ctx, world);
-  });
+  startGame();
+});
+
+restartGameBtn.addEventListener("click", () => {
+  endGameMenu.close();
+  // Reload the page for a clean restart (clears AI generation state)
+  window.location.reload();
 });
 
 createResizeObserver$().subscribe(({ width, height }) => {

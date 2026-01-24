@@ -148,3 +148,11 @@ export interface WithTool {
     isColliding: boolean;
   };
 }
+
+export interface WithGameState {
+  gameState: {
+    status: "playing" | "won" | "lost";
+    totalItemsSpawned: number;
+    itemsProcessed: number;
+  };
+}

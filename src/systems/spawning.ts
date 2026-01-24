@@ -87,8 +87,17 @@ export const spawningSystem: System<GameEntity, GameGlobal> = (world, deltaTime)
       physical: { size: ITEM_SIZE },
     });
 
+    // Update spawner timer and increment totalItemsSpawned in gameState
     world.updateEntities((entities) =>
-      entities.map((e) => (e.conveyor && e.spawner ? { ...e, spawner: { ...e.spawner, timer: 0, interval: Math.random() * 800 + 600 } } : e))
+      entities.map((e) => {
+        if (e.conveyor && e.spawner) {
+          return { ...e, spawner: { ...e.spawner, timer: 0, interval: Math.random() * 800 + 600 } };
+        }
+        if (e.gameState) {
+          return { ...e, gameState: { ...e.gameState, totalItemsSpawned: e.gameState.totalItemsSpawned + 1 } };
+        }
+        return e;
+      })
     );
 
     return world;

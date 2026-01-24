@@ -57,6 +57,27 @@
         </div>
       </div>
     </dialog>
+    <dialog id="endGameMenu" class="settings-dialog end-game-dialog">
+      <div class="dialog-header">
+        <h2 id="endGameTitle">Game Over</h2>
+      </div>
+      <div class="dialog-body">
+        <p id="endGameMessage">Your shift has ended!</p>
+        <div class="end-game-stats">
+          <div class="stat-item">
+            <span class="stat-label">Final Score</span>
+            <span id="finalScore" class="stat-value">$0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Items Processed</span>
+            <span id="itemsProcessed" class="stat-value">0</span>
+          </div>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button id="restartGame" class="btn btn-primary">Play Again</button>
+      </div>
+    </dialog>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

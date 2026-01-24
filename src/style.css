@@ -313,3 +313,59 @@ canvas {
   color: #888;
   font-style: italic;
 }
+
+/* End Game Dialog Styles */
+.end-game-dialog {
+  text-align: center;
+}
+
+.end-game-dialog .dialog-header {
+  justify-content: center;
+  border-bottom: none;
+}
+
+.end-game-dialog .dialog-header h2 {
+  font-size: 28px;
+}
+
+.end-game-dialog.won .dialog-header h2 {
+  color: #2ecc71;
+}
+
+.end-game-dialog.lost .dialog-header h2 {
+  color: #e74c3c;
+}
+
+.end-game-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 24px 0;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 12px;
+  border: 1px solid #333;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #f1c40f;
+}
+
+.end-game-dialog .dialog-footer {
+  justify-content: center;
+}
