@@ -65,7 +65,7 @@ const centroid = getCentroid(touchPoints); // Already order-invariant (sum is co
 ```ts
 interface ObjectSignature {
   id: string;
-  sides: [number, number, number]; // lengths of the 3 sides, incrementally sorted
+  sides: [number, number, number]; // lengths of the 3 sides, sorted in ascending order
   boundingBox?: {
     width: number;      // Width of the visual/collision box
     height: number;     // Height of the visual/collision box

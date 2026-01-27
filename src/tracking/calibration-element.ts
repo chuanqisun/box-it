@@ -251,6 +251,9 @@ export class CalibrationElement extends HTMLElement {
     this.currentSignature = null;
     this.currentObjectIndex++;
 
+    // Clean up previous subscription to avoid memory leaks
+    this.subscription?.unsubscribe();
+
     if (this.currentObjectIndex < this.objectIds.length) {
       // Start with preview phase for all objects
       this.calibrationPhase = "preview";

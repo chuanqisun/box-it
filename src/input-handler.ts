@@ -21,6 +21,8 @@ export class InputHandler {
   private world: World<GameEntity, GameGlobal>;
   private canvas: HTMLCanvasElement;
   private pointerState: PointerState = { x: 0, y: 0, rotation: 0 };
+  /** Cached box dimensions to avoid unnecessary updates */
+  private cachedBoxDimensions: { width: number; height: number } | null = null;
 
   constructor(world: World<GameEntity, GameGlobal>, canvas: HTMLCanvasElement) {
     this.world = world;
@@ -101,8 +103,17 @@ export class InputHandler {
 
   /**
    * Update the box entity's collision dimensions to match calibrated values.
+   * Uses caching to avoid unnecessary updates on every tracking frame.
    */
   private updateBoxDimensions(width: number, height: number): void {
+    // Check cache first to avoid unnecessary entity updates
+    if (this.cachedBoxDimensions?.width === width && this.cachedBoxDimensions?.height === height) {
+      return;
+    }
+    
+    // Update cache
+    this.cachedBoxDimensions = { width, height };
+    
     this.world
       .updateEntities((entities) =>
         entities.map((e) => {
