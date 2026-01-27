@@ -66,15 +66,19 @@ export class InputHandler {
       // Only process updates with reasonable confidence
       if (confidence < 0.3 || activePoints === 0) return;
 
+      // Calculate effective rotation including the orientation offset from calibration
+      const orientationOffset = boundingBox?.orientationOffset ?? 0;
+      const effectiveRotation = rotation + orientationOffset;
+
       // Apply offset from bounding box configuration in local (rotated) coordinates
       // The offset is defined relative to the object's orientation, so we need to
-      // rotate it by the current rotation to get the world-space offset
+      // rotate it by the effective rotation to get the world-space offset
       const xOffset = boundingBox?.xOffset ?? 0;
       const yOffset = boundingBox?.yOffset ?? 0;
       
-      // Rotate offset by current rotation to convert from local to world coordinates
-      const cos = Math.cos(rotation);
-      const sin = Math.sin(rotation);
+      // Rotate offset by effective rotation to convert from local to world coordinates
+      const cos = Math.cos(effectiveRotation);
+      const sin = Math.sin(effectiveRotation);
       const worldOffsetX = xOffset * cos - yOffset * sin;
       const worldOffsetY = xOffset * sin + yOffset * cos;
       
@@ -82,11 +86,11 @@ export class InputHandler {
       const adjustedY = y + worldOffsetY;
 
       if (id === "box") {
-        this.handlePointerInput(adjustedX, adjustedY, rotation);
+        this.handlePointerInput(adjustedX, adjustedY, effectiveRotation);
         this.startConveyor();
       }
       if (id === "tool1" || id === "tool2") {
-        this.updateToolState(id, adjustedX, adjustedY, rotation);
+        this.updateToolState(id, adjustedX, adjustedY, effectiveRotation);
       }
     });
   }

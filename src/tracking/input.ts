@@ -24,9 +24,9 @@ export interface KnownObject {
   boundingBox?: {
     width: number;
     height: number;
-    /** X offset from centroid in local coordinates (applied before rotation) */
+    /** X offset from centroid in local coordinates (applied in the rotated coordinate frame) */
     xOffset: number;
-    /** Y offset from centroid in local coordinates (applied before rotation) */
+    /** Y offset from centroid in local coordinates (applied in the rotated coordinate frame) */
     yOffset: number;
     /** Rotation offset in radians from the longest edge of the triangle */
     orientationOffset: number;
