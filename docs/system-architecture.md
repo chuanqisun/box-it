@@ -38,12 +38,41 @@ It's possible that the points are added/removed in any order, with delays and no
 
 We also have a redundant input mechanism to help debug the program: the user can use mouse to drag objects on the screen and use scroll wheel to rotate the object.
 
+### Order-Invariant Touch Point Algorithm
+
+The touch input system uses a **canonical ordering algorithm** to ensure that the centroid and rotation calculations are consistent regardless of the order in which touch points appear in the input stream.
+
+**Problem**: Touch points from the browser's touch API can arrive in any order. If we calculate rotation based on "point 0 to point 1", different orderings of the same physical triangle would produce different rotation values.
+
+**Solution**: The `geometry.ts` module provides order-invariant functions:
+
+1. **Canonical Point Ordering**: Points are sorted by their angle from the centroid (counterclockwise from positive x-axis). This ensures any permutation of the same 3 points produces the same ordered array.
+
+2. **Consistent Rotation Calculation**: 
+   - Find the longest edge of the triangle
+   - Use the third vertex (opposite to the longest edge) to determine a consistent "front" direction
+   - The cross product determines which side is "positive", ensuring consistent angle calculation
+
+```ts
+// Canonical ordering ensures consistent results
+const ordered = canonicalOrderPoints(touchPoints);
+const rotation = getCanonicalRotation(touchPoints); // Order-invariant
+const centroid = getCentroid(touchPoints); // Already order-invariant (sum is commutative)
+```
+
 ### Object Signature Contract
 
 ```ts
 interface ObjectSignature {
   id: string;
   sides: [number, number, number]; // lengths of the 3 sides, incrementally sorted
+  boundingBox?: {
+    width: number;      // Width of the visual/collision box
+    height: number;     // Height of the visual/collision box
+    xOffset: number;    // X offset from centroid in local coordinates
+    yOffset: number;    // Y offset from centroid in local coordinates
+    orientationOffset: number; // Rotation offset in radians
+  };
 }
 ```
 
@@ -54,11 +83,26 @@ interface ObjectUpdate {
   id: string;
   type: "down" | "move" | "up";
   position: { x: number; y: number };
-  rotation: number; // in degrees
+  rotation: number; // in radians
+  confidence: number; // 1.0 = all 3 points, 0.67 = 2 points, 0.33 = 1 point
+  activePoints: number;
+  boundingBox?: ObjectSignature["boundingBox"];
 }
 ```
 
 Note that the Object Signature and Update are only used in the input system. The game world is decoupled from the input system and has a different representation of game objects.
+
+### Calibration System
+
+The calibration UI allows users to register physical objects by:
+
+1. **Preview Phase**: Move the object around to see real-time preview. For the box, adjust width, height, offset, and rotation. A red crosshair shows the rotation center (centroid).
+
+2. **Touch Calibration Phase**: Hold the object steady for 2 seconds while the system measures the triangle side lengths.
+
+3. **Storage**: Calibrated signatures are stored in IndexedDB and loaded when tracking is initialized.
+
+The calibrated bounding box dimensions are applied to the in-game box entity's collision dimensions, ensuring the rendered box matches the calibration preview.
 
 ## World simulation
 

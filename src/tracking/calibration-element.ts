@@ -2,6 +2,7 @@ import { del, set } from "idb-keyval";
 import { html, render } from "lit-html";
 import { Subscription, distinctUntilChanged, exhaustMap, filter, finalize, map, share, takeUntil, tap, timer } from "rxjs";
 import { getInputRawEvent$ } from "./input";
+import { getCentroid as getGeoCentroid, getCanonicalRotation } from "./geometry";
 
 /**
  * Extended object signature with bounding box properties.
@@ -65,8 +66,8 @@ export class CalibrationElement extends HTMLElement {
 
   connectedCallback() {
     this.#clearPreviousResults();
-    // Start with preview phase for box (first object)
-    this.calibrationPhase = this.objectIds[0] === "box" ? "preview" : "touch";
+    // Start with preview phase for all objects
+    this.calibrationPhase = "preview";
     this.#render();
     this.#setupCanvas();
     this.#setupInput();
@@ -369,20 +370,12 @@ export class CalibrationElement extends HTMLElement {
 
   /** Calculate centroid of touch points */
   #getCentroid(points: TouchPoint[]): { x: number; y: number } {
-    const sum = points.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
-    return { x: sum.x / points.length, y: sum.y / points.length };
+    return getGeoCentroid(points);
   }
 
-  /** Calculate rotation based on longest edge of the triangle */
+  /** Calculate rotation based on longest edge of the triangle (order-invariant) */
   #getRotation(points: TouchPoint[]): number {
-    const distances = [
-      { i: 0, j: 1, dist: Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) },
-      { i: 1, j: 2, dist: Math.hypot(points[1].x - points[2].x, points[1].y - points[2].y) },
-      { i: 2, j: 0, dist: Math.hypot(points[2].x - points[0].x, points[2].y - points[0].y) },
-    ];
-    distances.sort((a, b) => b.dist - a.dist);
-    const { i, j } = distances[0];
-    return Math.atan2(points[j].y - points[i].y, points[j].x - points[i].x);
+    return getCanonicalRotation(points);
   }
 
   /** Draw box preview at the given position (x, y is the rotation center/centroid) */
@@ -466,6 +459,22 @@ export class CalibrationElement extends HTMLElement {
   /** Draw tool preview at the given position */
   #drawToolPreview(ctx: CanvasRenderingContext2D, toolId: string, x: number, y: number, rotation: number) {
     const radius = 40; // Same as TOOL_SIZE / 2 from factories.ts
+
+    // Draw rotation center indicator (red crosshair at centroid)
+    ctx.save();
+    ctx.strokeStyle = "#e74c3c";
+    ctx.lineWidth = 2;
+    const crossSize = 15;
+    ctx.beginPath();
+    ctx.moveTo(x - crossSize, y);
+    ctx.lineTo(x + crossSize, y);
+    ctx.moveTo(x, y - crossSize);
+    ctx.lineTo(x, y + crossSize);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
 
     ctx.save();
     ctx.translate(x, y);
@@ -582,9 +591,9 @@ export class CalibrationElement extends HTMLElement {
             `
           : isPreviewPhase
             ? html`
-                <div class="preview-controls">
+                <div class="preview-controls" @touchstart=${(e: Event) => e.stopPropagation()} @touchmove=${(e: Event) => e.stopPropagation()} @touchend=${(e: Event) => e.stopPropagation()}>
                   <div class="preview-instructions">
-                    Move the ${currentObjectId} around to see the preview. Press Done when ready.
+                    Move the ${currentObjectId} around to see the preview. The red crosshair shows the rotation center. Press Done when ready.
                   </div>
                   <button class="btn-done" @click=${() => this.#startTouchCalibrationPhase()}>Done - Start Calibration</button>
                 </div>

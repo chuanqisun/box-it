@@ -86,6 +86,10 @@ export class InputHandler {
       const adjustedY = y + worldOffsetY;
 
       if (id === "box") {
+        // Update box dimensions if calibrated dimensions are available
+        if (boundingBox?.width && boundingBox?.height) {
+          this.updateBoxDimensions(boundingBox.width, boundingBox.height);
+        }
         this.handlePointerInput(adjustedX, adjustedY, effectiveRotation);
         this.startConveyor();
       }
@@ -93,6 +97,29 @@ export class InputHandler {
         this.updateToolState(id, adjustedX, adjustedY, effectiveRotation);
       }
     });
+  }
+
+  /**
+   * Update the box entity's collision dimensions to match calibrated values.
+   */
+  private updateBoxDimensions(width: number, height: number): void {
+    this.world
+      .updateEntities((entities) =>
+        entities.map((e) => {
+          if (!e.box || !e.collision) return e;
+          // Only update if dimensions are different
+          if (e.collision.width === width && e.collision.height === height) return e;
+          return {
+            ...e,
+            collision: {
+              ...e.collision,
+              width,
+              height,
+            },
+          };
+        })
+      )
+      .next();
   }
 
   /**
