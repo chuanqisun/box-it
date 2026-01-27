@@ -397,16 +397,23 @@ export class CalibrationElement extends HTMLElement {
 
   /** Draw box preview at the given position */
   #drawBoxPreview(ctx: CanvasRenderingContext2D, x: number, y: number, rotation: number) {
-    const baseWidth = this.boundingBoxConfig.width;
-    const baseHeight = this.boundingBoxConfig.height;
-    const widthScale = this.boundingBoxConfig.widthScale;
-    const heightScale = this.boundingBoxConfig.heightScale;
-    const xOffset = this.boundingBoxConfig.xOffset;
-    const yOffset = this.boundingBoxConfig.yOffset;
+    // Get values with fallback to defaults if NaN or invalid
+    const baseWidth = Number.isFinite(this.boundingBoxConfig.width) ? this.boundingBoxConfig.width : 180;
+    const baseHeight = Number.isFinite(this.boundingBoxConfig.height) ? this.boundingBoxConfig.height : 130;
+    const widthScale = Number.isFinite(this.boundingBoxConfig.widthScale) && this.boundingBoxConfig.widthScale > 0 
+      ? this.boundingBoxConfig.widthScale : 1;
+    const heightScale = Number.isFinite(this.boundingBoxConfig.heightScale) && this.boundingBoxConfig.heightScale > 0 
+      ? this.boundingBoxConfig.heightScale : 1;
+    const xOffset = Number.isFinite(this.boundingBoxConfig.xOffset) ? this.boundingBoxConfig.xOffset : 0;
+    const yOffset = Number.isFinite(this.boundingBoxConfig.yOffset) ? this.boundingBoxConfig.yOffset : 0;
     
     // Apply scale to dimensions
     const width = baseWidth * widthScale;
     const height = baseHeight * heightScale;
+    
+    // Skip drawing if dimensions are invalid
+    if (width <= 0 || height <= 0) return;
+    
     const halfWidth = width / 2;
     const halfHeight = height / 2;
     const wall = 8 * Math.min(widthScale, heightScale);
