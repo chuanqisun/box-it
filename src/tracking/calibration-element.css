@@ -225,6 +225,7 @@ calibration-element {
     border: 1px solid #444;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
     z-index: 10;
+    touch-action: auto; /* Allow touch interactions within this element */
   }
 
   .preview-instructions {

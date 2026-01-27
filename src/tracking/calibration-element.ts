@@ -5,7 +5,7 @@ import { getInputRawEvent$ } from "./input";
 
 /**
  * Extended object signature with bounding box properties.
- * Supports customizable width, height, scale, offset, and orientation for the visual/collision representation.
+ * Supports customizable width, height, offset, and orientation for the visual/collision representation.
  */
 export interface ObjectSignature {
   id: string;
@@ -17,13 +17,9 @@ export interface ObjectSignature {
     width: number;
     /** Height (length) of the bounding box */
     height: number;
-    /** Width scale factor (1.0 = no scaling) */
-    widthScale: number;
-    /** Height scale factor (1.0 = no scaling) */
-    heightScale: number;
-    /** X offset from centroid (in pixels) */
+    /** X offset from centroid in local coordinates (applied before rotation) */
     xOffset: number;
-    /** Y offset from centroid (in pixels) */
+    /** Y offset from centroid in local coordinates (applied before rotation) */
     yOffset: number;
     /** Rotation offset in radians from the longest edge of the triangle */
     orientationOffset: number;
@@ -62,8 +58,6 @@ export class CalibrationElement extends HTMLElement {
   private boundingBoxConfig = { 
     width: 180, 
     height: 130, 
-    widthScale: 1.0, 
-    heightScale: 1.0, 
     xOffset: 0, 
     yOffset: 0, 
     orientationDegrees: 0 
@@ -235,8 +229,6 @@ export class CalibrationElement extends HTMLElement {
         boundingBox: {
           width: this.boundingBoxConfig.width,
           height: this.boundingBoxConfig.height,
-          widthScale: this.boundingBoxConfig.widthScale,
-          heightScale: this.boundingBoxConfig.heightScale,
           xOffset: this.boundingBoxConfig.xOffset,
           yOffset: this.boundingBoxConfig.yOffset,
           orientationOffset: (this.boundingBoxConfig.orientationDegrees * Math.PI) / 180,
@@ -285,8 +277,6 @@ export class CalibrationElement extends HTMLElement {
       boundingBox: {
         width: this.boundingBoxConfig.width,
         height: this.boundingBoxConfig.height,
-        widthScale: this.boundingBoxConfig.widthScale,
-        heightScale: this.boundingBoxConfig.heightScale,
         xOffset: this.boundingBoxConfig.xOffset,
         yOffset: this.boundingBoxConfig.yOffset,
         orientationOffset: (this.boundingBoxConfig.orientationDegrees * Math.PI) / 180,
@@ -395,44 +385,54 @@ export class CalibrationElement extends HTMLElement {
     return Math.atan2(points[j].y - points[i].y, points[j].x - points[i].x);
   }
 
-  /** Draw box preview at the given position */
+  /** Draw box preview at the given position (x, y is the rotation center/centroid) */
   #drawBoxPreview(ctx: CanvasRenderingContext2D, x: number, y: number, rotation: number) {
     // Get values with fallback to defaults if NaN or invalid
-    const baseWidth = Number.isFinite(this.boundingBoxConfig.width) ? this.boundingBoxConfig.width : 180;
-    const baseHeight = Number.isFinite(this.boundingBoxConfig.height) ? this.boundingBoxConfig.height : 130;
-    const widthScale = Number.isFinite(this.boundingBoxConfig.widthScale) && this.boundingBoxConfig.widthScale > 0 
-      ? this.boundingBoxConfig.widthScale : 1;
-    const heightScale = Number.isFinite(this.boundingBoxConfig.heightScale) && this.boundingBoxConfig.heightScale > 0 
-      ? this.boundingBoxConfig.heightScale : 1;
+    const width = Number.isFinite(this.boundingBoxConfig.width) ? this.boundingBoxConfig.width : 180;
+    const height = Number.isFinite(this.boundingBoxConfig.height) ? this.boundingBoxConfig.height : 130;
     const xOffset = Number.isFinite(this.boundingBoxConfig.xOffset) ? this.boundingBoxConfig.xOffset : 0;
     const yOffset = Number.isFinite(this.boundingBoxConfig.yOffset) ? this.boundingBoxConfig.yOffset : 0;
-    
-    // Apply scale to dimensions
-    const width = baseWidth * widthScale;
-    const height = baseHeight * heightScale;
     
     // Skip drawing if dimensions are invalid
     if (width <= 0 || height <= 0) return;
     
     const halfWidth = width / 2;
     const halfHeight = height / 2;
-    const wall = 8 * Math.min(widthScale, heightScale);
-    const left = -halfWidth;
-    const top = -halfHeight;
+    const wall = 8;
 
-    // Apply offset to position
-    const offsetX = x + xOffset;
-    const offsetY = y + yOffset;
-
-    // Box shadow
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    ctx.beginPath();
-    ctx.ellipse(offsetX + 15, offsetY + halfHeight + 15, halfWidth, 20, 0, 0, Math.PI * 2);
-    ctx.fill();
-
+    // Draw rotation center indicator (red crosshair at centroid)
     ctx.save();
-    ctx.translate(offsetX, offsetY);
+    ctx.strokeStyle = "#e74c3c";
+    ctx.lineWidth = 2;
+    const crossSize = 15;
+    ctx.beginPath();
+    ctx.moveTo(x - crossSize, y);
+    ctx.lineTo(x + crossSize, y);
+    ctx.moveTo(x, y - crossSize);
+    ctx.lineTo(x, y + crossSize);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // Apply rotation first, then offset in local (rotated) coordinates
+    ctx.save();
+    ctx.translate(x, y);
     ctx.rotate(rotation);
+    
+    // Now apply offset in local coordinates (after rotation)
+    // This means the offset moves the box relative to the rotation center
+    const boxCenterX = xOffset;
+    const boxCenterY = yOffset;
+    const left = boxCenterX - halfWidth;
+    const top = boxCenterY - halfHeight;
+
+    // Box shadow (approximate position)
+    ctx.fillStyle = "rgba(0,0,0,0.3)";
+    ctx.beginPath();
+    ctx.ellipse(boxCenterX + 10, boxCenterY + halfHeight + 10, halfWidth * 0.9, 15, 0, 0, Math.PI * 2);
+    ctx.fill();
 
     // Box main color
     ctx.fillStyle = "#d2b48c";
@@ -448,7 +448,7 @@ export class CalibrationElement extends HTMLElement {
     ctx.strokeRect(left, top, width, height);
 
     // Corner decorations
-    const cornerSize = 25 * Math.min(widthScale, heightScale);
+    const cornerSize = 25;
     ctx.beginPath();
     ctx.moveTo(left, top);
     ctx.lineTo(left + cornerSize, top + cornerSize);
@@ -504,9 +504,9 @@ export class CalibrationElement extends HTMLElement {
         <canvas></canvas>
         ${isPreviewPhase && isBoxObject
           ? html`
-              <div class="preview-controls">
+              <div class="preview-controls" @touchstart=${(e: Event) => e.stopPropagation()} @touchmove=${(e: Event) => e.stopPropagation()} @touchend=${(e: Event) => e.stopPropagation()}>
                 <div class="preview-instructions">
-                  Move the object around to see the box preview. Adjust dimensions, scale, offset, and rotation below.
+                  Move the object around to see the box preview. The red crosshair shows the rotation center. Adjust dimensions, offset, and rotation below.
                 </div>
                 <div class="preview-fields-row">
                   <div class="preview-field">
@@ -545,36 +545,6 @@ export class CalibrationElement extends HTMLElement {
                       .value=${String(this.boundingBoxConfig.orientationDegrees)}
                       @input=${(e: Event) => {
                         this.boundingBoxConfig.orientationDegrees = Number((e.target as HTMLInputElement).value);
-                      }}
-                    />
-                  </div>
-                </div>
-                <div class="preview-fields-row">
-                  <div class="preview-field">
-                    <label for="preview-width-scale">Width Scale</label>
-                    <input
-                      id="preview-width-scale"
-                      type="number"
-                      min="0.1"
-                      max="3"
-                      step="0.1"
-                      .value=${String(this.boundingBoxConfig.widthScale)}
-                      @input=${(e: Event) => {
-                        this.boundingBoxConfig.widthScale = Number((e.target as HTMLInputElement).value);
-                      }}
-                    />
-                  </div>
-                  <div class="preview-field">
-                    <label for="preview-height-scale">Height Scale</label>
-                    <input
-                      id="preview-height-scale"
-                      type="number"
-                      min="0.1"
-                      max="3"
-                      step="0.1"
-                      .value=${String(this.boundingBoxConfig.heightScale)}
-                      @input=${(e: Event) => {
-                        this.boundingBoxConfig.heightScale = Number((e.target as HTMLInputElement).value);
                       }}
                     />
                   </div>

@@ -24,13 +24,9 @@ export interface KnownObject {
   boundingBox?: {
     width: number;
     height: number;
-    /** Width scale factor (1.0 = no scaling) */
-    widthScale: number;
-    /** Height scale factor (1.0 = no scaling) */
-    heightScale: number;
-    /** X offset from centroid (in pixels) */
+    /** X offset from centroid in local coordinates (applied before rotation) */
     xOffset: number;
-    /** Y offset from centroid (in pixels) */
+    /** Y offset from centroid in local coordinates (applied before rotation) */
     yOffset: number;
     /** Rotation offset in radians from the longest edge of the triangle */
     orientationOffset: number;
@@ -50,8 +46,6 @@ export interface ObjectUpdate {
   boundingBox?: {
     width: number;
     height: number;
-    widthScale: number;
-    heightScale: number;
     xOffset: number;
     yOffset: number;
     orientationOffset: number;

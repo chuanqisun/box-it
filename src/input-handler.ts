@@ -66,11 +66,20 @@ export class InputHandler {
       // Only process updates with reasonable confidence
       if (confidence < 0.3 || activePoints === 0) return;
 
-      // Apply offset from bounding box configuration
+      // Apply offset from bounding box configuration in local (rotated) coordinates
+      // The offset is defined relative to the object's orientation, so we need to
+      // rotate it by the current rotation to get the world-space offset
       const xOffset = boundingBox?.xOffset ?? 0;
       const yOffset = boundingBox?.yOffset ?? 0;
-      const adjustedX = x + xOffset;
-      const adjustedY = y + yOffset;
+      
+      // Rotate offset by current rotation to convert from local to world coordinates
+      const cos = Math.cos(rotation);
+      const sin = Math.sin(rotation);
+      const worldOffsetX = xOffset * cos - yOffset * sin;
+      const worldOffsetY = xOffset * sin + yOffset * cos;
+      
+      const adjustedX = x + worldOffsetX;
+      const adjustedY = y + worldOffsetY;
 
       if (id === "box") {
         this.handlePointerInput(adjustedX, adjustedY, rotation);
