@@ -52,8 +52,6 @@ export class CalibrationElement extends HTMLElement {
   private currentSignature: ObjectSignature | null = null;
   /** Current bounding box values being configured */
   private boundingBoxConfig = { width: 180, height: 130, orientationDegrees: 0 };
-  /** Whether user is ready to start actual calibration (clicked Done in preview) */
-  private previewConfirmed = false;
 
   connectedCallback() {
     this.#clearPreviousResults();
@@ -214,8 +212,8 @@ export class CalibrationElement extends HTMLElement {
 
     // For box, use the bounding box config set during preview phase
     // For tools, save without bounding box (tools use circular collision)
-    if (currentObjectId === "box" && this.previewConfirmed) {
-      // Box already has bounding box configured from preview - save directly
+    if (currentObjectId === "box") {
+      // Box uses bounding box configured from preview - save with dimensions
       const signature: ObjectSignature = {
         ...this.currentSignature,
         boundingBox: {
@@ -227,28 +225,17 @@ export class CalibrationElement extends HTMLElement {
       await set(`object-signature-${signature.id}`, signature);
       console.log(`Calibrated ${signature.id}:`, signature);
       this.#moveToNextObject();
-    } else if (currentObjectId === "tool1" || currentObjectId === "tool2") {
+    } else {
       // Tools don't need bounding box config - save directly
       await set(`object-signature-${this.currentSignature.id}`, this.currentSignature);
       console.log(`Calibrated ${this.currentSignature.id}:`, this.currentSignature);
       this.#moveToNextObject();
-    } else {
-      // Fallback to bounding box configuration UI (shouldn't happen normally)
-      const longestSide = avgSides[2];
-      this.boundingBoxConfig = {
-        width: Math.round(longestSide * 0.8),
-        height: Math.round(longestSide * 1.2),
-        orientationDegrees: 0,
-      };
-      this.calibrationPhase = "boundingBox";
-      this.#renderBoundingBoxConfig();
     }
   }
 
   /** Move to the next object in calibration sequence */
   #moveToNextObject() {
     this.currentSignature = null;
-    this.previewConfirmed = false;
     this.currentObjectIndex++;
 
     if (this.currentObjectIndex < this.objectIds.length) {
@@ -377,7 +364,7 @@ export class CalibrationElement extends HTMLElement {
     const distances = [
       { i: 0, j: 1, dist: Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) },
       { i: 1, j: 2, dist: Math.hypot(points[1].x - points[2].x, points[1].y - points[2].y) },
-      { i: 2, j: 0, dist: Math.hypot(points[2].x - points[0].x, points[0].y - points[2].y) },
+      { i: 2, j: 0, dist: Math.hypot(points[2].x - points[0].x, points[2].y - points[0].y) },
     ];
     distances.sort((a, b) => b.dist - a.dist);
     const { i, j } = distances[0];
@@ -538,7 +525,6 @@ export class CalibrationElement extends HTMLElement {
 
   /** Transition from preview phase to touch calibration phase */
   #startTouchCalibrationPhase() {
-    this.previewConfirmed = true;
     this.calibrationPhase = "touch";
     this.#render();
   }
