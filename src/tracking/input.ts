@@ -24,6 +24,14 @@ export interface KnownObject {
   boundingBox?: {
     width: number;
     height: number;
+    /** Width scale factor (1.0 = no scaling) */
+    widthScale: number;
+    /** Height scale factor (1.0 = no scaling) */
+    heightScale: number;
+    /** X offset from centroid (in pixels) */
+    xOffset: number;
+    /** Y offset from centroid (in pixels) */
+    yOffset: number;
     /** Rotation offset in radians from the longest edge of the triangle */
     orientationOffset: number;
   };
@@ -38,6 +46,16 @@ export interface ObjectUpdate {
   confidence: number;
   /** Number of currently active touch points for this object */
   activePoints: number;
+  /** Bounding box configuration for this object */
+  boundingBox?: {
+    width: number;
+    height: number;
+    widthScale: number;
+    heightScale: number;
+    xOffset: number;
+    yOffset: number;
+    orientationOffset: number;
+  };
 }
 
 interface TouchPoint {
@@ -70,6 +88,8 @@ interface TrackedObjectState {
   confidence: number;
   isActive: boolean;
   lastUpdateTime: number;
+  /** Bounding box configuration */
+  boundingBox?: KnownObject["boundingBox"];
 }
 
 const SIGNATURE_TOLERANCE_RATIO = 0.35; // avg relative error allowed for side length matching (soft cap)
@@ -97,6 +117,7 @@ export function getObjectEvents(
           velocity: { x: 0, y: 0, rotation: 0 },
           confidence: 0,
           lastUpdateTime: 0,
+          boundingBox: obj.boundingBox,
         },
       ])
     );
@@ -160,6 +181,7 @@ function computeObjectUpdates(
         rotation: state.rotation ?? 0,
         confidence: CONFIDENCE.PRESERVED,
         activePoints: 0,
+        boundingBox: state.boundingBox,
       });
       state.isActive = false;
       state.confidence = CONFIDENCE.PRESERVED;
@@ -216,6 +238,7 @@ function updateObjectState(
       rotation: newRotation,
       confidence: CONFIDENCE.THREE_POINTS,
       activePoints: 3,
+      boundingBox: state.boundingBox,
     };
   }
 
@@ -264,6 +287,7 @@ function updateObjectState(
         rotation: newRotation,
         confidence,
         activePoints: partialMatch.matchedCount,
+        boundingBox: state.boundingBox,
       };
     }
 
@@ -295,6 +319,7 @@ function updateObjectState(
         rotation: predictedRotation,
         confidence: CONFIDENCE.PRESERVED,
         activePoints: 0,
+        boundingBox: state.boundingBox,
       };
     }
   }

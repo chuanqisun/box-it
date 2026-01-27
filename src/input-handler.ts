@@ -62,16 +62,22 @@ export class InputHandler {
    * Set up physical object tracking.
    */
   private setupObjectTracking(): void {
-    initObjectTracking(this.canvas, (id, x, y, rotation, confidence, activePoints) => {
+    initObjectTracking(this.canvas, (id, x, y, rotation, confidence, activePoints, boundingBox) => {
       // Only process updates with reasonable confidence
       if (confidence < 0.3 || activePoints === 0) return;
 
+      // Apply offset from bounding box configuration
+      const xOffset = boundingBox?.xOffset ?? 0;
+      const yOffset = boundingBox?.yOffset ?? 0;
+      const adjustedX = x + xOffset;
+      const adjustedY = y + yOffset;
+
       if (id === "box") {
-        this.handlePointerInput(x, y, rotation);
+        this.handlePointerInput(adjustedX, adjustedY, rotation);
         this.startConveyor();
       }
       if (id === "tool1" || id === "tool2") {
-        this.updateToolState(id, x, y, rotation);
+        this.updateToolState(id, adjustedX, adjustedY, rotation);
       }
     });
   }
