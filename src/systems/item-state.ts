@@ -7,7 +7,10 @@ export const itemStateSystem: System<GameEntity, GameGlobal> = (world, deltaTime
   const conveyor = world.entities.find((e) => e.conveyor)?.conveyor;
   const canvasHeight = world.global.canvas.height;
 
-  return world.updateEntities((entities) =>
+  // Process entities and count removed items in a single pass
+  let itemsRemoved = 0;
+
+  world.updateEntities((entities) =>
     entities
       .map((entity) => {
         if (entity.boxAnchor || !entity.itemState || !entity.transform || !entity.velocity) {
@@ -39,9 +42,20 @@ export const itemStateSystem: System<GameEntity, GameGlobal> = (world, deltaTime
       .filter((item) => {
         // Remove if off screen (only for items that are not packed)
         if (!item.boxAnchor && item.itemState && item.transform && item.transform.y > canvasHeight + 100) {
+          itemsRemoved++;
           return false;
         }
         return true;
       })
+      .map((e) => {
+        // Update itemsProcessed in gameState for items that fell off screen (applied to all entities in same pass)
+        if (itemsRemoved > 0 && e.gameState) {
+          return { ...e, gameState: { ...e.gameState, itemsProcessed: e.gameState.itemsProcessed + itemsRemoved } };
+        }
+        return e;
+      })
   );
+
+  // Reset itemsRemoved after processing (it's been applied above)
+  return world;
 };

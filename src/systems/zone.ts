@@ -56,6 +56,8 @@ function shipBox(world: GameWorld): void {
     velocityY: -1,
   };
 
+  const itemsShipped = packed.length;
+
   world.updateEntities((entities) =>
     entities.map((e) => {
       if (e.feedback) {
@@ -72,6 +74,9 @@ function shipBox(world: GameWorld): void {
       }
       if (e.box) {
         return { ...e, box: { ...e.box, hasBox: false } };
+      }
+      if (e.gameState) {
+        return { ...e, gameState: { ...e.gameState, itemsProcessed: e.gameState.itemsProcessed + itemsShipped } };
       }
       return e;
     })

@@ -3,9 +3,23 @@ import { html, render } from "lit-html";
 import { Subscription, distinctUntilChanged, exhaustMap, filter, finalize, map, share, takeUntil, tap, timer } from "rxjs";
 import { getInputRawEvent$ } from "./input";
 
-interface ObjectSignature {
+/**
+ * Extended object signature with bounding box properties.
+ * Supports customizable width, height, and orientation for the visual/collision representation.
+ */
+export interface ObjectSignature {
   id: string;
-  sides: [number, number, number]; // lengths of the 3 sides, incrementally sorted
+  /** Lengths of the 3 sides of the touch triangle, sorted in ascending order */
+  sides: [number, number, number];
+  /** Bounding box dimensions and orientation (optional, for visual/collision purposes) */
+  boundingBox?: {
+    /** Width of the bounding box (in pixels or arbitrary units) */
+    width: number;
+    /** Height (length) of the bounding box */
+    height: number;
+    /** Rotation offset in radians from the longest edge of the triangle */
+    orientationOffset: number;
+  };
 }
 
 interface TouchPoint {
@@ -32,6 +46,12 @@ export class CalibrationElement extends HTMLElement {
   private sidesMeasurements: number[][] = [[], [], []]; // [side1[], side2[], side3[]]
   private subscription?: Subscription;
   private waitingForClear = false; // waiting for all touches to be removed before next calibration
+  /** Current phase of calibration: 'touch' for 3-point calibration, 'boundingBox' for dimensions */
+  private calibrationPhase: "touch" | "boundingBox" = "touch";
+  /** Temporary storage for current object's touch signature before bounding box configuration */
+  private currentSignature: ObjectSignature | null = null;
+  /** Current bounding box values being configured */
+  private boundingBoxConfig = { width: 100, height: 100, orientationDegrees: 0 };
 
   connectedCallback() {
     this.#clearPreviousResults();
@@ -52,6 +72,7 @@ export class CalibrationElement extends HTMLElement {
 
   #setupCanvas() {
     this.canvas = this.querySelector("canvas")!;
+    if (!this.canvas) return;
     this.ctx = this.canvas.getContext("2d")!;
 
     // Set canvas size to match viewport
@@ -63,7 +84,8 @@ export class CalibrationElement extends HTMLElement {
   }
 
   #setupInput() {
-    const input$ = getInputRawEvent$(this.canvas!);
+    if (!this.canvas) return;
+    const input$ = getInputRawEvent$(this.canvas);
 
     const touchCount$ = input$.pipe(
       tap((event) => {
@@ -89,7 +111,7 @@ export class CalibrationElement extends HTMLElement {
           }
         }
 
-        if (this.isCalibrating && this.touchPoints.size === 3) {
+        if (this.isCalibrating && this.touchPoints.size === 3 && this.calibrationPhase === "touch") {
           this.#recordMeasurement();
         }
 
@@ -105,7 +127,7 @@ export class CalibrationElement extends HTMLElement {
 
     this.subscription = touchCount$
       .pipe(
-        filter((count) => count === 3 && !this.waitingForClear),
+        filter((count) => count === 3 && !this.waitingForClear && this.calibrationPhase === "touch"),
         exhaustMap(() => {
           this.#startCalibration();
 
@@ -115,7 +137,7 @@ export class CalibrationElement extends HTMLElement {
             takeUntil(touchCountChanged$),
             tap(() => {
               this.waitingForClear = true;
-              this.#finishCalibration();
+              this.#finishTouchCalibration();
             }),
             finalize(() => {
               if (this.isCalibrating) {
@@ -159,7 +181,8 @@ export class CalibrationElement extends HTMLElement {
     return values.reduce((sum, val) => sum + val, 0) / values.length;
   }
 
-  async #finishCalibration() {
+  /** Called after 3-point touch calibration is complete - transitions to bounding box config */
+  #finishTouchCalibration() {
     // Calculate average for each side
     const avgSides: [number, number, number] = [
       this.#calculateAverage(this.sidesMeasurements[0]),
@@ -167,9 +190,49 @@ export class CalibrationElement extends HTMLElement {
       this.#calculateAverage(this.sidesMeasurements[2]),
     ];
 
-    const signature: ObjectSignature = {
+    // Store temporarily
+    this.currentSignature = {
       id: this.objectIds[this.currentObjectIndex],
       sides: avgSides,
+    };
+
+    console.log(`Touch calibration complete for ${this.currentSignature.id}:`, avgSides);
+
+    // Reset state
+    this.isCalibrating = false;
+    this.sidesMeasurements = [[], [], []];
+
+    // Use default bounding box values based on the triangle size
+    const longestSide = avgSides[2];
+    this.boundingBoxConfig = {
+      width: Math.round(longestSide * 0.8),
+      height: Math.round(longestSide * 1.2),
+      orientationDegrees: 0,
+    };
+
+    // Show bounding box configuration UI
+    this.calibrationPhase = "boundingBox";
+    this.#renderBoundingBoxConfig();
+  }
+
+  /** Handle changes to bounding box configuration */
+  #onBoundingBoxChange(field: "width" | "height" | "orientationDegrees", value: number) {
+    this.boundingBoxConfig[field] = value;
+    this.#renderBoundingBoxConfig();
+  }
+
+  /** Confirm bounding box configuration and save the complete signature */
+  async #confirmBoundingBox() {
+    if (!this.currentSignature) return;
+
+    // Add bounding box to signature
+    const signature: ObjectSignature = {
+      ...this.currentSignature,
+      boundingBox: {
+        width: this.boundingBoxConfig.width,
+        height: this.boundingBoxConfig.height,
+        orientationOffset: (this.boundingBoxConfig.orientationDegrees * Math.PI) / 180,
+      },
     };
 
     // Store in idb-keyval
@@ -177,14 +240,38 @@ export class CalibrationElement extends HTMLElement {
 
     console.log(`Calibrated ${signature.id}:`, signature);
 
-    // Reset state
-    this.isCalibrating = false;
-    this.sidesMeasurements = [[], [], []];
-
-    // Move to next object
+    // Reset for next object
+    this.currentSignature = null;
+    this.calibrationPhase = "touch";
     this.currentObjectIndex++;
+
     if (this.currentObjectIndex < this.objectIds.length) {
       this.#render();
+      this.#setupCanvas();
+      this.#setupInput();
+    } else {
+      this.#showComplete();
+    }
+  }
+
+  /** Skip bounding box configuration and use defaults */
+  async #skipBoundingBox() {
+    if (!this.currentSignature) return;
+
+    // Save without bounding box (will use defaults)
+    await set(`object-signature-${this.currentSignature.id}`, this.currentSignature);
+
+    console.log(`Calibrated ${this.currentSignature.id} (no bounding box):`, this.currentSignature);
+
+    // Reset for next object
+    this.currentSignature = null;
+    this.calibrationPhase = "touch";
+    this.currentObjectIndex++;
+
+    if (this.currentObjectIndex < this.objectIds.length) {
+      this.#render();
+      this.#setupCanvas();
+      this.#setupInput();
     } else {
       this.#showComplete();
     }
@@ -192,6 +279,7 @@ export class CalibrationElement extends HTMLElement {
 
   #renderLoop = () => {
     if (!this.ctx || !this.canvas) return;
+    if (this.calibrationPhase !== "touch") return; // Don't render when showing bounding box config
 
     const ctx = this.ctx;
     const canvas = this.canvas;
@@ -249,6 +337,129 @@ export class CalibrationElement extends HTMLElement {
       `,
       this
     );
+  }
+
+  /** Render the bounding box configuration UI */
+  #renderBoundingBoxConfig() {
+    const objectId = this.currentSignature?.id ?? "object";
+    const sidesInfo = this.currentSignature?.sides
+      ? `Triangle sides: ${this.currentSignature.sides.map((s) => Math.round(s)).join(", ")} px`
+      : "";
+
+    render(
+      html`
+        <div class="calibration-header">
+          <h2>Configure bounding box for ${objectId}</h2>
+          <button class="close-button" @click=${() => this.dispatchEvent(new CustomEvent("calibration-cancel"))}>✕</button>
+        </div>
+        <div class="bounding-box-config">
+          <p class="sides-info">${sidesInfo}</p>
+          <p class="config-description">
+            Set the bounding box dimensions and orientation for the visual representation and collision detection.
+          </p>
+
+          <div class="bounding-box-preview">
+            <svg viewBox="0 0 200 200" class="preview-svg">
+              <!-- Triangle representing touch points -->
+              <polygon
+                points="${this.#getTrianglePoints()}"
+                fill="rgba(241, 196, 15, 0.3)"
+                stroke="#f1c40f"
+                stroke-width="2"
+              />
+              <!-- Bounding box -->
+              <g transform="translate(100, 100) rotate(${this.boundingBoxConfig.orientationDegrees})">
+                <rect
+                  x="${-this.boundingBoxConfig.width / 4}"
+                  y="${-this.boundingBoxConfig.height / 4}"
+                  width="${this.boundingBoxConfig.width / 2}"
+                  height="${this.boundingBoxConfig.height / 2}"
+                  fill="rgba(52, 152, 219, 0.3)"
+                  stroke="#3498db"
+                  stroke-width="2"
+                  stroke-dasharray="5,3"
+                />
+                <!-- Orientation indicator -->
+                <line x1="0" y1="0" x2="${this.boundingBoxConfig.width / 4}" y2="0" stroke="#2ecc71" stroke-width="3" />
+              </g>
+              <!-- Center point -->
+              <circle cx="100" cy="100" r="4" fill="#e74c3c" />
+            </svg>
+          </div>
+
+          <div class="config-fields">
+            <div class="config-field">
+              <label for="bbox-width">Width (px)</label>
+              <input
+                id="bbox-width"
+                type="number"
+                min="10"
+                max="500"
+                .value=${String(this.boundingBoxConfig.width)}
+                @input=${(e: Event) => this.#onBoundingBoxChange("width", Number((e.target as HTMLInputElement).value))}
+              />
+            </div>
+            <div class="config-field">
+              <label for="bbox-height">Height (px)</label>
+              <input
+                id="bbox-height"
+                type="number"
+                min="10"
+                max="500"
+                .value=${String(this.boundingBoxConfig.height)}
+                @input=${(e: Event) => this.#onBoundingBoxChange("height", Number((e.target as HTMLInputElement).value))}
+              />
+            </div>
+            <div class="config-field">
+              <label for="bbox-orientation">Orientation (°)</label>
+              <input
+                id="bbox-orientation"
+                type="number"
+                min="-180"
+                max="180"
+                .value=${String(this.boundingBoxConfig.orientationDegrees)}
+                @input=${(e: Event) => this.#onBoundingBoxChange("orientationDegrees", Number((e.target as HTMLInputElement).value))}
+              />
+            </div>
+          </div>
+
+          <div class="config-actions">
+            <button class="btn-skip" @click=${() => this.#skipBoundingBox()}>Skip (Use Defaults)</button>
+            <button class="btn-confirm" @click=${() => this.#confirmBoundingBox()}>Confirm</button>
+          </div>
+        </div>
+      `,
+      this
+    );
+  }
+
+  /** Generate SVG triangle points from the calibrated sides for preview */
+  #getTrianglePoints(): string {
+    if (!this.currentSignature?.sides) return "100,70 70,130 130,130";
+
+    // Normalize sides to fit in the preview (roughly 60px max dimension)
+    const [a, b, c] = this.currentSignature.sides;
+    const maxSide = Math.max(a, b, c);
+    const scale = 50 / maxSide;
+
+    // Create a triangle centered at (100, 100)
+    // Place first point at top, second at bottom-left, third at bottom-right
+    const sa = a * scale;
+    const sb = b * scale;
+    const sc = c * scale;
+
+    // Use law of cosines to find angles
+    // Clamp the argument to [-1, 1] to handle floating point errors and invalid triangles
+    const cosArg = (sa * sa + sb * sb - sc * sc) / (2 * sa * sb);
+    const clampedCosArg = Math.max(-1, Math.min(1, cosArg));
+    const angleAtC = Math.acos(clampedCosArg);
+
+    // Position vertices
+    const p1 = { x: 100, y: 70 };
+    const p2 = { x: 100 - sa * 0.5, y: 70 + sb * Math.sin(angleAtC) };
+    const p3 = { x: 100 + sa * 0.5, y: 70 + sb * Math.sin(angleAtC) };
+
+    return `${p1.x},${p1.y} ${p2.x},${p2.y} ${p3.x},${p3.y}`;
   }
 
   #showComplete() {
