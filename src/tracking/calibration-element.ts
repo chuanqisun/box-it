@@ -46,15 +46,19 @@ export class CalibrationElement extends HTMLElement {
   private sidesMeasurements: number[][] = [[], [], []]; // [side1[], side2[], side3[]]
   private subscription?: Subscription;
   private waitingForClear = false; // waiting for all touches to be removed before next calibration
-  /** Current phase of calibration: 'touch' for 3-point calibration, 'boundingBox' for dimensions */
-  private calibrationPhase: "touch" | "boundingBox" = "touch";
+  /** Current phase of calibration: 'preview' for real-time preview, 'touch' for 3-point calibration, 'boundingBox' for dimensions */
+  private calibrationPhase: "preview" | "touch" | "boundingBox" = "preview";
   /** Temporary storage for current object's touch signature before bounding box configuration */
   private currentSignature: ObjectSignature | null = null;
   /** Current bounding box values being configured */
-  private boundingBoxConfig = { width: 100, height: 100, orientationDegrees: 0 };
+  private boundingBoxConfig = { width: 180, height: 130, orientationDegrees: 0 };
+  /** Whether user is ready to start actual calibration (clicked Done in preview) */
+  private previewConfirmed = false;
 
   connectedCallback() {
     this.#clearPreviousResults();
+    // Start with preview phase for box (first object)
+    this.calibrationPhase = this.objectIds[0] === "box" ? "preview" : "touch";
     this.#render();
     this.#setupCanvas();
     this.#setupInput();
@@ -94,13 +98,17 @@ export class CalibrationElement extends HTMLElement {
         const rect = this.canvas!.getBoundingClientRect();
 
         if (event.type === "touchstart" || event.type === "touchmove") {
+          // Calculate scale factors to convert CSS coordinates to canvas internal coordinates
+          const scaleX = this.canvas!.width / rect.width;
+          const scaleY = this.canvas!.height / rect.height;
+
           // Update all current touches
           for (let i = 0; i < event.touches.length; i++) {
             const touch = event.touches[i];
             this.touchPoints.set(touch.identifier, {
               id: touch.identifier,
-              x: touch.clientX - rect.left,
-              y: touch.clientY - rect.top,
+              x: (touch.clientX - rect.left) * scaleX,
+              y: (touch.clientY - rect.top) * scaleY,
             });
           }
         } else if (event.type === "touchend") {
@@ -181,8 +189,8 @@ export class CalibrationElement extends HTMLElement {
     return values.reduce((sum, val) => sum + val, 0) / values.length;
   }
 
-  /** Called after 3-point touch calibration is complete - transitions to bounding box config */
-  #finishTouchCalibration() {
+  /** Called after 3-point touch calibration is complete - transitions to bounding box config or saves directly */
+  async #finishTouchCalibration() {
     // Calculate average for each side
     const avgSides: [number, number, number] = [
       this.#calculateAverage(this.sidesMeasurements[0]),
@@ -190,9 +198,11 @@ export class CalibrationElement extends HTMLElement {
       this.#calculateAverage(this.sidesMeasurements[2]),
     ];
 
+    const currentObjectId = this.objectIds[this.currentObjectIndex];
+
     // Store temporarily
     this.currentSignature = {
-      id: this.objectIds[this.currentObjectIndex],
+      id: currentObjectId,
       sides: avgSides,
     };
 
@@ -202,17 +212,54 @@ export class CalibrationElement extends HTMLElement {
     this.isCalibrating = false;
     this.sidesMeasurements = [[], [], []];
 
-    // Use default bounding box values based on the triangle size
-    const longestSide = avgSides[2];
-    this.boundingBoxConfig = {
-      width: Math.round(longestSide * 0.8),
-      height: Math.round(longestSide * 1.2),
-      orientationDegrees: 0,
-    };
+    // For box, use the bounding box config set during preview phase
+    // For tools, save without bounding box (tools use circular collision)
+    if (currentObjectId === "box" && this.previewConfirmed) {
+      // Box already has bounding box configured from preview - save directly
+      const signature: ObjectSignature = {
+        ...this.currentSignature,
+        boundingBox: {
+          width: this.boundingBoxConfig.width,
+          height: this.boundingBoxConfig.height,
+          orientationOffset: (this.boundingBoxConfig.orientationDegrees * Math.PI) / 180,
+        },
+      };
+      await set(`object-signature-${signature.id}`, signature);
+      console.log(`Calibrated ${signature.id}:`, signature);
+      this.#moveToNextObject();
+    } else if (currentObjectId === "tool1" || currentObjectId === "tool2") {
+      // Tools don't need bounding box config - save directly
+      await set(`object-signature-${this.currentSignature.id}`, this.currentSignature);
+      console.log(`Calibrated ${this.currentSignature.id}:`, this.currentSignature);
+      this.#moveToNextObject();
+    } else {
+      // Fallback to bounding box configuration UI (shouldn't happen normally)
+      const longestSide = avgSides[2];
+      this.boundingBoxConfig = {
+        width: Math.round(longestSide * 0.8),
+        height: Math.round(longestSide * 1.2),
+        orientationDegrees: 0,
+      };
+      this.calibrationPhase = "boundingBox";
+      this.#renderBoundingBoxConfig();
+    }
+  }
 
-    // Show bounding box configuration UI
-    this.calibrationPhase = "boundingBox";
-    this.#renderBoundingBoxConfig();
+  /** Move to the next object in calibration sequence */
+  #moveToNextObject() {
+    this.currentSignature = null;
+    this.previewConfirmed = false;
+    this.currentObjectIndex++;
+
+    if (this.currentObjectIndex < this.objectIds.length) {
+      // Start with preview phase for all objects
+      this.calibrationPhase = "preview";
+      this.#render();
+      this.#setupCanvas();
+      this.#setupInput();
+    } else {
+      this.#showComplete();
+    }
   }
 
   /** Handle changes to bounding box configuration */
@@ -240,18 +287,7 @@ export class CalibrationElement extends HTMLElement {
 
     console.log(`Calibrated ${signature.id}:`, signature);
 
-    // Reset for next object
-    this.currentSignature = null;
-    this.calibrationPhase = "touch";
-    this.currentObjectIndex++;
-
-    if (this.currentObjectIndex < this.objectIds.length) {
-      this.#render();
-      this.#setupCanvas();
-      this.#setupInput();
-    } else {
-      this.#showComplete();
-    }
+    this.#moveToNextObject();
   }
 
   /** Skip bounding box configuration and use defaults */
@@ -263,30 +299,34 @@ export class CalibrationElement extends HTMLElement {
 
     console.log(`Calibrated ${this.currentSignature.id} (no bounding box):`, this.currentSignature);
 
-    // Reset for next object
-    this.currentSignature = null;
-    this.calibrationPhase = "touch";
-    this.currentObjectIndex++;
-
-    if (this.currentObjectIndex < this.objectIds.length) {
-      this.#render();
-      this.#setupCanvas();
-      this.#setupInput();
-    } else {
-      this.#showComplete();
-    }
+    this.#moveToNextObject();
   }
 
   #renderLoop = () => {
     if (!this.ctx || !this.canvas) return;
-    if (this.calibrationPhase !== "touch") return; // Don't render when showing bounding box config
+    // Render during both preview and touch phases, but not boundingBox config
+    if (this.calibrationPhase !== "touch" && this.calibrationPhase !== "preview") return;
 
     const ctx = this.ctx;
     const canvas = this.canvas;
+    const currentObjectId = this.objectIds[this.currentObjectIndex];
 
     // Clear canvas
     ctx.fillStyle = this.isCalibrating ? "#2a5a2a" : "#222222";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw based on current object type and phase
+    if (this.touchPoints.size === 3) {
+      const points = Array.from(this.touchPoints.values());
+      const centroid = this.#getCentroid(points);
+      const rotation = this.#getRotation(points) + (this.boundingBoxConfig.orientationDegrees * Math.PI) / 180;
+
+      if (currentObjectId === "box") {
+        this.#drawBoxPreview(ctx, centroid.x, centroid.y, rotation);
+      } else if (currentObjectId === "tool1" || currentObjectId === "tool2") {
+        this.#drawToolPreview(ctx, currentObjectId, centroid.x, centroid.y, rotation);
+      }
+    }
 
     // Draw crosshairs for each touch point
     ctx.strokeStyle = "#f1c40f";
@@ -326,17 +366,181 @@ export class CalibrationElement extends HTMLElement {
     requestAnimationFrame(this.#renderLoop);
   };
 
+  /** Calculate centroid of touch points */
+  #getCentroid(points: TouchPoint[]): { x: number; y: number } {
+    const sum = points.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
+    return { x: sum.x / points.length, y: sum.y / points.length };
+  }
+
+  /** Calculate rotation based on longest edge of the triangle */
+  #getRotation(points: TouchPoint[]): number {
+    const distances = [
+      { i: 0, j: 1, dist: Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) },
+      { i: 1, j: 2, dist: Math.hypot(points[1].x - points[2].x, points[1].y - points[2].y) },
+      { i: 2, j: 0, dist: Math.hypot(points[2].x - points[0].x, points[0].y - points[2].y) },
+    ];
+    distances.sort((a, b) => b.dist - a.dist);
+    const { i, j } = distances[0];
+    return Math.atan2(points[j].y - points[i].y, points[j].x - points[i].x);
+  }
+
+  /** Draw box preview at the given position */
+  #drawBoxPreview(ctx: CanvasRenderingContext2D, x: number, y: number, rotation: number) {
+    const width = this.boundingBoxConfig.width;
+    const height = this.boundingBoxConfig.height;
+    const halfWidth = width / 2;
+    const halfHeight = height / 2;
+    const wall = 8;
+    const left = -halfWidth;
+    const top = -halfHeight;
+
+    // Box shadow
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.beginPath();
+    ctx.ellipse(x + 15, y + halfHeight + 15, halfWidth, 20, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotation);
+
+    // Box main color
+    ctx.fillStyle = "#d2b48c";
+    ctx.fillRect(left, top, width, height);
+
+    // Box inner shadow
+    ctx.fillStyle = "#8b5a2b";
+    ctx.fillRect(left + wall, top + wall, width - wall * 2, height - wall * 2);
+
+    // Box border
+    ctx.strokeStyle = "#a07040";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(left, top, width, height);
+
+    // Corner decorations
+    ctx.beginPath();
+    ctx.moveTo(left, top);
+    ctx.lineTo(left + 25, top + 25);
+    ctx.moveTo(left + width, top);
+    ctx.lineTo(left + width - 25, top + 25);
+    ctx.moveTo(left, top + height);
+    ctx.lineTo(left + 25, top + height - 25);
+    ctx.moveTo(left + width, top + height);
+    ctx.lineTo(left + width - 25, top + height - 25);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  /** Draw tool preview at the given position */
+  #drawToolPreview(ctx: CanvasRenderingContext2D, toolId: string, x: number, y: number, rotation: number) {
+    const radius = 40; // Same as TOOL_SIZE / 2 from factories.ts
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rotation);
+
+    // Tool circle
+    ctx.fillStyle = "rgba(52, 152, 219, 0.35)";
+    ctx.strokeStyle = "#3498db";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Tool label
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 16px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(toolId.toUpperCase(), 0, 0);
+
+    ctx.restore();
+  }
+
   #render() {
+    const currentObjectId = this.objectIds[this.currentObjectIndex];
+    const isPreviewPhase = this.calibrationPhase === "preview";
+    const isBoxObject = currentObjectId === "box";
+
     render(
       html`
         <div class="calibration-header">
-          <h2>Place the ${this.objectIds[this.currentObjectIndex]} in the area</h2>
+          <h2>${isPreviewPhase ? `Preview and adjust ${currentObjectId}` : `Place the ${currentObjectId} in the area`}</h2>
           <button class="close-button" @click=${() => this.dispatchEvent(new CustomEvent("calibration-cancel"))}>✕</button>
         </div>
         <canvas></canvas>
+        ${isPreviewPhase && isBoxObject
+          ? html`
+              <div class="preview-controls">
+                <div class="preview-instructions">
+                  Move the object around to see the box preview. Adjust size and rotation below.
+                </div>
+                <div class="preview-fields">
+                  <div class="preview-field">
+                    <label for="preview-width">Width</label>
+                    <input
+                      id="preview-width"
+                      type="number"
+                      min="50"
+                      max="400"
+                      .value=${String(this.boundingBoxConfig.width)}
+                      @input=${(e: Event) => {
+                        this.boundingBoxConfig.width = Number((e.target as HTMLInputElement).value);
+                      }}
+                    />
+                  </div>
+                  <div class="preview-field">
+                    <label for="preview-height">Height</label>
+                    <input
+                      id="preview-height"
+                      type="number"
+                      min="50"
+                      max="400"
+                      .value=${String(this.boundingBoxConfig.height)}
+                      @input=${(e: Event) => {
+                        this.boundingBoxConfig.height = Number((e.target as HTMLInputElement).value);
+                      }}
+                    />
+                  </div>
+                  <div class="preview-field">
+                    <label for="preview-rotation">Rotation (°)</label>
+                    <input
+                      id="preview-rotation"
+                      type="number"
+                      min="-180"
+                      max="180"
+                      .value=${String(this.boundingBoxConfig.orientationDegrees)}
+                      @input=${(e: Event) => {
+                        this.boundingBoxConfig.orientationDegrees = Number((e.target as HTMLInputElement).value);
+                      }}
+                    />
+                  </div>
+                </div>
+                <button class="btn-done" @click=${() => this.#startTouchCalibrationPhase()}>Done - Start Calibration</button>
+              </div>
+            `
+          : isPreviewPhase
+            ? html`
+                <div class="preview-controls">
+                  <div class="preview-instructions">
+                    Move the ${currentObjectId} around to see the preview. Press Done when ready.
+                  </div>
+                  <button class="btn-done" @click=${() => this.#startTouchCalibrationPhase()}>Done - Start Calibration</button>
+                </div>
+              `
+            : null}
       `,
       this
     );
+  }
+
+  /** Transition from preview phase to touch calibration phase */
+  #startTouchCalibrationPhase() {
+    this.previewConfirmed = true;
+    this.calibrationPhase = "touch";
+    this.#render();
   }
 
   /** Render the bounding box configuration UI */
