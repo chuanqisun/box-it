@@ -149,7 +149,7 @@ export interface WithTool {
     /** Whether this tool is currently actively touching the screen */
     isTouching: boolean;
     /** For mover tool: ID of the item being moved, null if not moving any item */
-    movingItemId?: number | null;
+    movingItemId: number | null;
   };
 }
 

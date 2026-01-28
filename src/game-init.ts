@@ -94,6 +94,9 @@ export function resetGameWorld(world: World<GameEntity, GameGlobal>): void {
       if (e.interactions) {
         return { ...e, interactions: { rules: [] } };
       }
+      if (e.tool) {
+        return { ...e, tool: { ...e.tool, isTouching: false, isColliding: false, movingItemId: null } };
+      }
       return e;
     })
   );

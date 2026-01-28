@@ -296,6 +296,9 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
   for (const tool of tools) {
     if (!tool.tool || !tool.transform || !tool.collision) continue;
 
+    // Skip tool3 (mover) in this loop - it's handled separately
+    if (tool.tool.id === "tool3") continue;
+
     const toolRadius = tool.collision.radius ?? tool.collision.width / 2;
 
     for (const item of items) {
@@ -394,6 +397,8 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
       if (boundItem && boundItem.transform) {
         // Update item position to follow the tool center
         itemPositionUpdates.set(boundItem.id, { x: toolCenterX, y: toolCenterY });
+        // Mark item as processed to prevent other tools from interacting with it
+        processedItems.add(boundItem.id);
       } else {
         // Item no longer exists, clear the binding
         moverUpdates.set(tool.id, { movingItemId: null });
@@ -401,7 +406,8 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
     } else if (tool.tool.isTouching) {
       // Mover is touching but not bound to any item yet - find first colliding item
       for (const item of items) {
-        if (!item.transform || !item.collision) continue;
+        // Skip items already processed by another tool
+        if (!item.transform || !item.collision || processedItems.has(item.id)) continue;
 
         const itemWidth = item.physical?.size ?? item.collision.width;
         const itemHeight = item.physical?.size ?? item.collision.height;
@@ -417,7 +423,8 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
         );
 
         if (isColliding) {
-          // Bind to this item
+          // Bind to this item and mark it as processed
+          processedItems.add(item.id);
           moverUpdates.set(tool.id, { movingItemId: item.id });
           // Also update position immediately
           itemPositionUpdates.set(item.id, { x: toolCenterX, y: toolCenterY });
