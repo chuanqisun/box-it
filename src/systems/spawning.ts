@@ -19,7 +19,7 @@ export const spawningSystem: System<GameEntity, GameGlobal> = (world, deltaTime)
   if (!generationStarted) {
     generationStarted = true;
 
-    const items$ = createItemStream$({ theme: "test run", count: 20 }).pipe(take(30), share());
+    const items$ = createItemStream$({ theme: "Black Friday Sale", count: 30 }).pipe(take(60), share());
 
     items$.subscribe({
       next: (item) => {
