@@ -314,6 +314,12 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
 
       if (tool.tool.id === "tool1") {
         // Tool 1: Container - turns items into 📦 with fixed cost
+        // Skip if item is already a container
+        const emoji = item.render.emoji;
+        if (emoji === "📦") {
+          continue;
+        }
+
         totalScoreChange += BOX_TOOL_COST;
 
         feedbackEffects.push({
