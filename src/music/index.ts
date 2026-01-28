@@ -11,6 +11,7 @@ import backgroundMusicUrl from "./packing-line-panic.mp3";
 // Background music audio element
 let backgroundMusic: HTMLAudioElement | null = null;
 let isCurrentlyPlaying = false;
+let playAttemptInProgress = false;
 
 /**
  * Preload the background music file.
@@ -48,18 +49,23 @@ export function playBackgroundMusic(): void {
     return;
   }
 
-  if (isCurrentlyPlaying) {
-    return; // Already playing
+  // Already playing or play attempt in progress
+  if (isCurrentlyPlaying || playAttemptInProgress) {
+    return;
   }
+
+  playAttemptInProgress = true;
 
   backgroundMusic.play()
     .then(() => {
       isCurrentlyPlaying = true;
+      playAttemptInProgress = false;
     })
     .catch((error) => {
       // Handle autoplay restrictions - will retry on next system tick
       console.debug("Background music playback blocked:", error);
       isCurrentlyPlaying = false;
+      playAttemptInProgress = false;
     });
 }
 
@@ -75,11 +81,12 @@ export function stopBackgroundMusic(): void {
   backgroundMusic.pause();
   backgroundMusic.currentTime = 0;
   isCurrentlyPlaying = false;
+  playAttemptInProgress = false;
 }
 
 /**
  * Check if background music is currently playing.
  */
 export function isMusicPlaying(): boolean {
-  return isCurrentlyPlaying && backgroundMusic !== null && !backgroundMusic.paused;
+  return isCurrentlyPlaying;
 }
