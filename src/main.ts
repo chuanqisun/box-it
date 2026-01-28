@@ -19,6 +19,7 @@ import { createGameWorld, resetGameWorld } from "./game-init";
 import { GameLoop } from "./game-loop";
 import { InputHandler } from "./input-handler";
 import { createResizeObserver$ } from "./engine";
+import { preloadSounds } from "./sounds";
 import "./style.css";
 
 // Systems
@@ -58,6 +59,9 @@ const restartGameBtn = document.getElementById("restartGame") as HTMLButtonEleme
 // Initialize settings and calibration
 initSettings();
 initCalibrationLifecycle();
+
+// Preload sound files
+preloadSounds();
 
 // Create game world
 const world = createGameWorld({ canvas });

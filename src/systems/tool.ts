@@ -1,5 +1,6 @@
 import type { GameEntity, GameGlobal } from "../domain";
 import type { System } from "../engine";
+import { playSound } from "../sounds";
 
 /**
  * The box tool (tool1) interacts with everything by turning them into 📦
@@ -320,6 +321,9 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
           continue;
         }
 
+        // Play tool1 sound effect
+        playSound("tool1");
+
         totalScoreChange += BOX_TOOL_COST;
 
         feedbackEffects.push({
@@ -340,6 +344,9 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
         const transform = ironToolTransforms.find((t) => t.input === emoji);
 
         if (transform) {
+          // Play tool2 sound effect
+          playSound("tool2");
+
           totalScoreChange += transform.score;
 
           const scoreColor = transform.score >= 0 ? "#2ecc71" : "#e74c3c";

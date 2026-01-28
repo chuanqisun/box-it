@@ -1,5 +1,6 @@
 import type { GameEntity, GameGlobal, GameWorld } from "../domain";
 import type { System } from "../engine";
+import { playSound } from "../sounds";
 
 export const zoneSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) => {
   const boxEntity = world.entities.find((entity) => entity.box);
@@ -36,6 +37,9 @@ function shipBox(world: GameWorld): void {
 
   const scoreEntity = world.entities.find((e) => e.score);
   if (!scoreEntity?.score) return;
+
+  // Play shipped sound
+  playSound("shipped");
 
   let boxValue = 0;
   packed.forEach((entity) => {
@@ -118,6 +122,9 @@ function buyBox(world: GameWorld): void {
     );
     return;
   }
+
+  // Play get box sound
+  playSound("getBox");
 
   const feedback = {
     text: "NEW BOX -$200",

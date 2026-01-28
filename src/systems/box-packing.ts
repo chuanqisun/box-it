@@ -1,5 +1,6 @@
 import type { GameEntity, GameGlobal } from "../domain";
 import type { System } from "../engine";
+import { playSound } from "../sounds";
 
 const ITEM_SIZE = 45;
 
@@ -79,6 +80,9 @@ export const boxPackingSystem: System<GameEntity, GameGlobal> = (world, _deltaTi
         })
       );
     }
+
+    // Play sound when item falls into box
+    playSound("fallIntoBox");
 
     world.addEntity({
       transform: { x: relX, y: relY, rotation: -boxRotation, scale: 0 },
