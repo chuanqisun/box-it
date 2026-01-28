@@ -115,8 +115,10 @@ export async function initObjectTracking(
 
     const knownObjects = signatures
       .map((entry) => {
-        // Use calibrated signature if available, otherwise use default
-        const signature = entry.signature?.sides ? entry.signature : getDefaultSignature(entry.id);
+        // Use calibrated signature if available with both sides and boundingBox, otherwise use default
+        const signature = entry.signature?.sides && entry.signature?.boundingBox 
+          ? entry.signature 
+          : getDefaultSignature(entry.id);
         if (!signature?.sides) return null;
         return {
           id: entry.id,

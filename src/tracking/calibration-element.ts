@@ -38,7 +38,7 @@ export const CALIBRATION_OBJECT_IDS = ["box", "tool1", "tool2"];
 /**
  * Default calibration presets for each object.
  * These are used when there is no calibration data and at the beginning of calibration.
- * Sides are the dimensions of the 3 sides of the touch triangle in ascending order.
+ * Sides are the lengths of the 3 sides of the touch triangle in ascending order.
  */
 export const DEFAULT_CALIBRATION_PRESETS: Record<string, { sides: [number, number, number]; width: number; height: number; orientationDegrees: number }> = {
   box: { sides: [230, 384, 450], width: 400, height: 300, orientationDegrees: 32 },
@@ -82,14 +82,11 @@ export class CalibrationElement extends HTMLElement {
   private calibrationPhase: "preview" | "touch" | "boundingBox" = "preview";
   /** Temporary storage for current object's touch signature before bounding box configuration */
   private currentSignature: ObjectSignature | null = null;
-  /** Current bounding box values being configured */
-  private boundingBoxConfig = getDefaultBoundingBoxConfig("box");
+  /** Current bounding box values being configured - initialized with first object defaults */
+  private boundingBoxConfig = getDefaultBoundingBoxConfig(CALIBRATION_OBJECT_IDS[0]);
 
   connectedCallback() {
     this.#clearPreviousResults();
-    // Initialize with object-specific defaults for the first object
-    const currentObjectId = this.objectIds[this.currentObjectIndex];
-    this.boundingBoxConfig = getDefaultBoundingBoxConfig(currentObjectId);
     // Start with preview phase for all objects
     this.calibrationPhase = "preview";
     this.#render();
