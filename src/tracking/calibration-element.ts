@@ -221,29 +221,20 @@ export class CalibrationElement extends HTMLElement {
     this.isCalibrating = false;
     this.sidesMeasurements = [[], [], []];
 
-    // For box, use the bounding box config set during preview phase
-    // For tools, save without bounding box (tools use circular collision)
-    if (currentObjectId === "box") {
-      // Box uses bounding box configured from preview - save with dimensions
-      const signature: ObjectSignature = {
-        ...this.currentSignature,
-        boundingBox: {
-          width: this.boundingBoxConfig.width,
-          height: this.boundingBoxConfig.height,
-          xOffset: this.boundingBoxConfig.xOffset,
-          yOffset: this.boundingBoxConfig.yOffset,
-          orientationOffset: (this.boundingBoxConfig.orientationDegrees * Math.PI) / 180,
-        },
-      };
-      await set(`object-signature-${signature.id}`, signature);
-      console.log(`Calibrated ${signature.id}:`, signature);
-      this.#moveToNextObject();
-    } else {
-      // Tools don't need bounding box config - save directly
-      await set(`object-signature-${this.currentSignature.id}`, this.currentSignature);
-      console.log(`Calibrated ${this.currentSignature.id}:`, this.currentSignature);
-      this.#moveToNextObject();
-    }
+    // Save with bounding box configuration for all objects
+    const signature: ObjectSignature = {
+      ...this.currentSignature,
+      boundingBox: {
+        width: this.boundingBoxConfig.width,
+        height: this.boundingBoxConfig.height,
+        xOffset: this.boundingBoxConfig.xOffset,
+        yOffset: this.boundingBoxConfig.yOffset,
+        orientationOffset: (this.boundingBoxConfig.orientationDegrees * Math.PI) / 180,
+      },
+    };
+    await set(`object-signature-${signature.id}`, signature);
+    console.log(`Calibrated ${signature.id}:`, signature);
+    this.#moveToNextObject();
   }
 
   /** Move to the next object in calibration sequence */
@@ -253,6 +244,15 @@ export class CalibrationElement extends HTMLElement {
 
     // Clean up previous subscription to avoid memory leaks
     this.subscription?.unsubscribe();
+
+    // Reset bounding box config for the next object
+    this.boundingBoxConfig = { 
+      width: 180, 
+      height: 130, 
+      xOffset: 0, 
+      yOffset: 0, 
+      orientationDegrees: 0 
+    };
 
     if (this.currentObjectIndex < this.objectIds.length) {
       // Start with preview phase for all objects
@@ -461,7 +461,17 @@ export class CalibrationElement extends HTMLElement {
 
   /** Draw tool preview at the given position */
   #drawToolPreview(ctx: CanvasRenderingContext2D, toolId: string, x: number, y: number, rotation: number) {
-    const radius = 40; // Same as TOOL_SIZE / 2 from factories.ts
+    // Get values with fallback to defaults if NaN or invalid
+    const width = Number.isFinite(this.boundingBoxConfig.width) ? this.boundingBoxConfig.width : 80;
+    const height = Number.isFinite(this.boundingBoxConfig.height) ? this.boundingBoxConfig.height : 80;
+    const xOffset = Number.isFinite(this.boundingBoxConfig.xOffset) ? this.boundingBoxConfig.xOffset : 0;
+    const yOffset = Number.isFinite(this.boundingBoxConfig.yOffset) ? this.boundingBoxConfig.yOffset : 0;
+    
+    // Skip drawing if dimensions are invalid
+    if (width <= 0 || height <= 0) return;
+    
+    const halfWidth = width / 2;
+    const halfHeight = height / 2;
 
     // Draw rotation center indicator (red crosshair at centroid)
     ctx.save();
@@ -479,25 +489,30 @@ export class CalibrationElement extends HTMLElement {
     ctx.stroke();
     ctx.restore();
 
+    // Apply rotation first, then offset in local (rotated) coordinates
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(rotation);
+    
+    // Apply offset in local coordinates
+    const boxCenterX = xOffset;
+    const boxCenterY = yOffset;
+    const left = boxCenterX - halfWidth;
+    const top = boxCenterY - halfHeight;
 
-    // Tool circle
+    // Tool background
     ctx.fillStyle = "rgba(52, 152, 219, 0.35)";
     ctx.strokeStyle = "#3498db";
     ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(0, 0, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+    ctx.fillRect(left, top, width, height);
+    ctx.strokeRect(left, top, width, height);
 
     // Tool label
     ctx.fillStyle = "#fff";
     ctx.font = "bold 16px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(toolId.toUpperCase(), 0, 0);
+    ctx.fillText(toolId.toUpperCase(), boxCenterX, boxCenterY);
 
     ctx.restore();
   }
@@ -505,7 +520,6 @@ export class CalibrationElement extends HTMLElement {
   #render() {
     const currentObjectId = this.objectIds[this.currentObjectIndex];
     const isPreviewPhase = this.calibrationPhase === "preview";
-    const isBoxObject = currentObjectId === "box";
 
     render(
       html`
@@ -514,11 +528,11 @@ export class CalibrationElement extends HTMLElement {
           <button class="close-button" @click=${() => this.dispatchEvent(new CustomEvent("calibration-cancel"))}>✕</button>
         </div>
         <canvas></canvas>
-        ${isPreviewPhase && isBoxObject
+        ${isPreviewPhase
           ? html`
               <div class="preview-controls" @touchstart=${(e: Event) => e.stopPropagation()} @touchmove=${(e: Event) => e.stopPropagation()} @touchend=${(e: Event) => e.stopPropagation()}>
                 <div class="preview-instructions">
-                  Move the object around to see the box preview. The red crosshair shows the rotation center. Adjust dimensions, offset, and rotation below.
+                  Move the ${currentObjectId} around to see the preview. The red crosshair shows the rotation center. Adjust dimensions, offset, and rotation below.
                 </div>
                 <div class="preview-fields-row">
                   <div class="preview-field">
@@ -592,16 +606,7 @@ export class CalibrationElement extends HTMLElement {
                 <button class="btn-done" @click=${() => this.#startTouchCalibrationPhase()}>Done - Start Calibration</button>
               </div>
             `
-          : isPreviewPhase
-            ? html`
-                <div class="preview-controls" @touchstart=${(e: Event) => e.stopPropagation()} @touchmove=${(e: Event) => e.stopPropagation()} @touchend=${(e: Event) => e.stopPropagation()}>
-                  <div class="preview-instructions">
-                    Move the ${currentObjectId} around to see the preview. The red crosshair shows the rotation center. Press Done when ready.
-                  </div>
-                  <button class="btn-done" @click=${() => this.#startTouchCalibrationPhase()}>Done - Start Calibration</button>
-                </div>
-              `
-            : null}
+          : null}
       `,
       this
     );
