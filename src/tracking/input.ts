@@ -151,6 +151,202 @@ export function getObjectEvents(
   });
 }
 
+/**
+ * Find the best global assignment of touch combinations to objects.
+ * This optimizes for the best overall match rather than greedy per-object matching.
+ * 
+ * When there are multiple objects and multiple sets of touches, we want to ensure
+ * that each object gets matched to the touches that best fit it globally, rather than
+ * having the first object claim the best touches and leaving suboptimal matches for others.
+ * 
+ * @param states - Array of tracked object states to match
+ * @param touches - All available touch points
+ * @param usedTouchIds - Set of touch IDs that are already in use
+ * @returns Array of matched objects with their assigned touch points
+ */
+function findGlobalThreePointMatches(
+  states: TrackedObjectState[],
+  touches: TouchPoint[],
+  usedTouchIds: Set<number>
+): Array<{ state: TrackedObjectState; points: [TouchPoint, TouchPoint, TouchPoint]; touchIds: [number, number, number] }> {
+  const availableTouches = touches.filter((t) => !usedTouchIds.has(t.id));
+  if (availableTouches.length < 3) return [];
+
+  // Build all possible 3-point combinations once (performance optimization)
+  const combinations = buildTouchCombinations(availableTouches);
+
+  // Find all valid combinations for each object
+  const stateCandidates = states.map((state) => {
+    const validMatches: Array<{
+      points: [TouchPoint, TouchPoint, TouchPoint];
+      touchIds: [number, number, number];
+      score: number;
+    }> = [];
+
+    for (const combo of combinations) {
+      const signatureScore = getSignatureScore(combo, state.signature);
+      if (signatureScore > SIGNATURE_TOLERANCE_RATIO) continue;
+
+      const center = getCentroid(combo);
+      const distancePenalty = state.position
+        ? getDistance(center, state.position) / Math.max(...state.signature)
+        : 0;
+      const totalScore = signatureScore + distancePenalty * 0.35;
+
+      validMatches.push({
+        points: combo as [TouchPoint, TouchPoint, TouchPoint],
+        touchIds: [combo[0].id, combo[1].id, combo[2].id],
+        score: totalScore,
+      });
+    }
+
+    // Sort by score (lower is better)
+    validMatches.sort((a, b) => a.score - b.score);
+    return { state, candidates: validMatches };
+  });
+
+  // Find the best global assignment using backtracking
+  return findBestAssignment(stateCandidates);
+}
+
+/**
+ * Find the best assignment of candidates to states, ensuring no touch is used twice.
+ * Uses backtracking to explore all possible assignments and select the one with the lowest total score.
+ * 
+ * This is essentially a constrained optimization problem: assign each object to a set of 3 touches
+ * such that no touch is used twice and the sum of match scores is minimized.
+ * 
+ * For 2-3 objects (typical case), this exhaustive search is fast. For more objects,
+ * a more sophisticated algorithm like the Hungarian algorithm could be used.
+ * 
+ * @param stateCandidates - For each state, a list of valid touch combinations sorted by score
+ * @returns The optimal assignment of touches to objects
+ */
+function findBestAssignment(
+  stateCandidates: Array<{
+    state: TrackedObjectState;
+    candidates: Array<{
+      points: [TouchPoint, TouchPoint, TouchPoint];
+      touchIds: [number, number, number];
+      score: number;
+    }>;
+  }>
+): Array<{ state: TrackedObjectState; points: [TouchPoint, TouchPoint, TouchPoint]; touchIds: [number, number, number] }> {
+  // Filter out states with no valid candidates
+  const validStates = stateCandidates.filter((sc) => sc.candidates.length > 0);
+  if (validStates.length === 0) return [];
+
+  // For simplicity with 2-3 objects, we can try all combinations
+  // For more objects, this would need optimization, but we expect 2-3 typically
+  let bestAssignment: Array<{
+    state: TrackedObjectState;
+    points: [TouchPoint, TouchPoint, TouchPoint];
+    touchIds: [number, number, number];
+    score: number;
+  }> = [];
+  let bestTotalScore = Infinity;
+
+  function tryAssignment(
+    stateIndex: number,
+    currentAssignment: Array<{ state: TrackedObjectState; points: [TouchPoint, TouchPoint, TouchPoint]; touchIds: [number, number, number]; score: number }>,
+    usedTouches: Set<number>,
+    currentScore: number
+  ): void {
+    // Prune branches that can't possibly beat the current best
+    if (currentScore >= bestTotalScore) return;
+
+    // Base case: we've assigned all states
+    if (stateIndex >= validStates.length) {
+      if (currentScore < bestTotalScore) {
+        bestTotalScore = currentScore;
+        bestAssignment = [...currentAssignment];
+      }
+      return;
+    }
+
+    const { state, candidates } = validStates[stateIndex];
+
+    // Try each candidate for this state
+    for (const candidate of candidates) {
+      // Check if any touch in this candidate is already used
+      const touchesOverlap = candidate.touchIds.some((id) => usedTouches.has(id));
+      if (touchesOverlap) continue;
+
+      // Try this candidate
+      const newUsedTouches = new Set(usedTouches);
+      candidate.touchIds.forEach((id) => newUsedTouches.add(id));
+
+      currentAssignment.push({
+        state,
+        points: candidate.points,
+        touchIds: candidate.touchIds,
+        score: candidate.score,
+      });
+
+      // Recurse to next state
+      tryAssignment(stateIndex + 1, currentAssignment, newUsedTouches, currentScore + candidate.score);
+
+      // Backtrack
+      currentAssignment.pop();
+    }
+
+    // Also try not assigning this state (it might not have a valid match)
+    tryAssignment(stateIndex + 1, currentAssignment, usedTouches, currentScore);
+  }
+
+  tryAssignment(0, [], new Set(), 0);
+
+  // Return assignments without the score field (not needed by caller)
+  return bestAssignment.map(({ state, points, touchIds }) => ({ state, points, touchIds }));
+}
+
+/**
+ * Update an object state with known points and touch IDs.
+ * This is used after global matching has determined the best assignment.
+ */
+function updateObjectStateWithPoints(
+  state: TrackedObjectState,
+  points: [TouchPoint, TouchPoint, TouchPoint],
+  touchIds: [number, number, number],
+  now: number
+): ObjectUpdate | null {
+  const dt = state.lastUpdateTime > 0 ? (now - state.lastUpdateTime) / 1000 : 0;
+
+  // Calculate new position and rotation
+  const newPosition = getCentroid(points);
+  const newRotation = getRotation(points, state.rotation);
+
+  // Update velocity based on position change
+  if (state.position && dt > 0) {
+    state.velocity = {
+      x: (newPosition.x - state.position.x) / dt,
+      y: (newPosition.y - state.position.y) / dt,
+      rotation: normalizeAngle(newRotation - (state.rotation ?? newRotation)) / dt,
+    };
+  }
+
+  const type = state.isActive ? "move" : "down";
+
+  state.points = points;
+  state.touchIds = [touchIds[0], touchIds[1], touchIds[2]];
+  state.activePointIndices = new Set([0, 1, 2]);
+  state.position = newPosition;
+  state.rotation = newRotation;
+  state.confidence = CONFIDENCE.THREE_POINTS;
+  state.isActive = true;
+  state.lastUpdateTime = now;
+
+  return {
+    id: state.id,
+    type,
+    position: newPosition,
+    rotation: newRotation,
+    confidence: CONFIDENCE.THREE_POINTS,
+    activePoints: 3,
+    boundingBox: state.boundingBox,
+  };
+}
+
 function computeObjectUpdates(
   touches: TouchPoint[],
   objectStates: Map<string, TrackedObjectState>,
@@ -158,11 +354,41 @@ function computeObjectUpdates(
 ): ObjectUpdate[] {
   const updates: ObjectUpdate[] = [];
   const usedTouchIds = new Set<number>();
+  const processedStateIds = new Set<string>();
+
+  // Check if we should use global matching
+  const states = Array.from(objectStates.values());
+  
+  // Use global matching when we have:
+  // - Multiple objects (2+)
+  // - Enough touches for multiple 3-point matches (6+)
+  const shouldUseGlobalMatching = states.length >= 2 && touches.length >= 6;
+  
+  if (shouldUseGlobalMatching) {
+    const globalMatches = findGlobalThreePointMatches(states, touches, usedTouchIds);
+    
+    // Process global matches
+    for (const { state, points, touchIds } of globalMatches) {
+      // Mark touches as used
+      touchIds.forEach((id) => usedTouchIds.add(id));
+      
+      const result = updateObjectStateWithPoints(state, points, touchIds, now);
+      if (result) {
+        updates.push(result);
+        processedStateIds.add(state.id);
+      }
+    }
+  }
 
   // Sort states by confidence to give priority to high-confidence objects
   const sortedStates = Array.from(objectStates.values()).sort((a, b) => b.confidence - a.confidence);
 
   for (const state of sortedStates) {
+    // Skip states that were already processed by global matching
+    if (processedStateIds.has(state.id)) {
+      continue;
+    }
+
     const result = updateObjectState(state, touches, usedTouchIds, now);
 
     if (result) {

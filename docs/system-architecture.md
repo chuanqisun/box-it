@@ -60,6 +60,21 @@ const rotation = getCanonicalRotation(touchPoints); // Order-invariant
 const centroid = getCentroid(touchPoints); // Already order-invariant (sum is commutative)
 ```
 
+### Global Matching Algorithm
+
+When multiple objects (2+) and sufficient touch points (6+) are present, the system uses a **global matching algorithm** to optimize object-to-touch assignments.
+
+**Problem**: A greedy approach where each object sequentially claims its best-matching touches can lead to suboptimal global assignments. For example, if two objects and two distinct sets of 3 touches are present, the first object might claim touches that better match the second object.
+
+**Solution**: The `input.ts` module implements backtracking-based global optimization:
+
+1. **Candidate Generation**: For each object, find all valid 3-point combinations that match its signature within tolerance
+2. **Backtracking Search**: Explore all possible assignments of combinations to objects, ensuring no touch is used twice
+3. **Branch Pruning**: Skip branches that can't improve upon the current best solution
+4. **Optimal Selection**: Choose the assignment with the minimum total matching score
+
+This ensures that when multiple objects are tracked simultaneously, each object is matched to the touches that best fit it globally, rather than locally. The algorithm falls back to greedy matching for single objects or when there aren't enough touches (< 6) for multiple complete matches.
+
 ### Object Signature Contract
 
 ```ts
