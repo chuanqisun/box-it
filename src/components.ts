@@ -154,5 +154,7 @@ export interface WithGameState {
     status: "playing" | "won" | "lost";
     totalItemsSpawned: number;
     itemsProcessed: number;
+    durationMs: number;
+    timeRemainingMs: number;
   };
 }

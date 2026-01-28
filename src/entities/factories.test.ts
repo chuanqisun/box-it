@@ -1,16 +1,16 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  createFeedbackEntity,
-  createInteractionsEntity,
-  createConveyorEntity,
   createBoxEntity,
-  createZoneEntity,
-  createPointerEntity,
-  createToolEntity,
-  createScoreEntity,
+  createConveyorEntity,
+  createFeedbackEntity,
   createGameStateEntity,
+  createInteractionsEntity,
   createItemEntity,
   createPackedItemEntity,
+  createPointerEntity,
+  createScoreEntity,
+  createToolEntity,
+  createZoneEntity,
   EntityConstants,
 } from "./factories";
 
@@ -141,6 +141,12 @@ describe("Entity Factories", () => {
       const entity = createGameStateEntity();
       expect(entity.gameState!.totalItemsSpawned).toBe(0);
       expect(entity.gameState!.itemsProcessed).toBe(0);
+    });
+
+    it("should start with full time remaining", () => {
+      const entity = createGameStateEntity();
+      expect(entity.gameState!.durationMs).toBe(60_000);
+      expect(entity.gameState!.timeRemainingMs).toBe(60_000);
     });
   });
 

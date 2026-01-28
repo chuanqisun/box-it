@@ -9,15 +9,15 @@
 import type { GameEntity, GameGlobal } from "./domain";
 import { World } from "./engine";
 import {
-  createFeedbackEntity,
-  createInteractionsEntity,
-  createConveyorEntity,
   createBoxEntity,
-  createZoneEntity,
-  createPointerEntity,
-  createToolEntity,
-  createScoreEntity,
+  createConveyorEntity,
+  createFeedbackEntity,
   createGameStateEntity,
+  createInteractionsEntity,
+  createPointerEntity,
+  createScoreEntity,
+  createToolEntity,
+  createZoneEntity,
   EntityConstants,
 } from "./entities/factories";
 
@@ -64,7 +64,16 @@ export function resetGameWorld(world: World<GameEntity, GameGlobal>): void {
   world.updateEntities((entities) =>
     entities.map((e) => {
       if (e.gameState) {
-        return { ...e, gameState: { status: "playing" as const, totalItemsSpawned: 0, itemsProcessed: 0 } };
+        return {
+          ...e,
+          gameState: {
+            status: "playing" as const,
+            totalItemsSpawned: 0,
+            itemsProcessed: 0,
+            durationMs: 60_000,
+            timeRemainingMs: 60_000,
+          },
+        };
       }
       if (e.score) {
         return { ...e, score: { value: 600, packedCount: 0 } };

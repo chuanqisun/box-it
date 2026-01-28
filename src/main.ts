@@ -16,10 +16,10 @@
 
 import { initSettings } from "./ai/settings";
 import { preloadSounds, stopBackgroundMusic } from "./audio";
+import { createResizeObserver$ } from "./engine";
 import { createGameWorld, resetGameWorld } from "./game-init";
 import { GameLoop } from "./game-loop";
 import { InputHandler } from "./input-handler";
-import { createResizeObserver$ } from "./engine";
 import "./style.css";
 
 // Systems
@@ -43,6 +43,7 @@ import { initCalibrationLifecycle } from "./tracking/tracking";
 const canvas = document.getElementById("gameCanvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
 const scoreEl = document.getElementById("score")!;
+const timeLeftEl = document.getElementById("timeLeft")!;
 const startMenu = document.getElementById("startMenu") as HTMLDialogElement;
 const startGameBtn = document.getElementById("startGame") as HTMLButtonElement;
 const endGameMenu = document.getElementById("endGameMenu") as HTMLDialogElement;
@@ -104,6 +105,10 @@ const gameLoop = new GameLoop(world, ctx, systems, {
   onScoreUpdate: (score) => {
     scoreEl.innerText = String(score);
   },
+  onTimeUpdate: (timeRemainingMs) => {
+    const secondsRemaining = Math.ceil(timeRemainingMs / 1000);
+    timeLeftEl.textContent = String(secondsRemaining);
+  },
   onGameEnd: (status, score, itemsProcessed) => {
     showEndGameScreen(status, score, itemsProcessed);
   },
@@ -119,7 +124,7 @@ function showEndGameScreen(status: "won" | "lost", score: number, itemsProcessed
 
   if (status === "won") {
     endGameTitle.textContent = "🎉 Shift Complete!";
-    endGameMessage.textContent = "Great job! You processed all the items!";
+    endGameMessage.textContent = "Time's up! Thanks for working the shift.";
   } else {
     endGameTitle.textContent = "💸 Bankrupt!";
     endGameMessage.textContent = "You ran out of funds and couldn't afford a new box.";
@@ -132,6 +137,10 @@ function showEndGameScreen(status: "won" | "lost", score: number, itemsProcessed
 
 function startGame(): void {
   resetGameWorld(world);
+  const gameState = world.entities.find((e) => e.gameState)?.gameState;
+  if (gameState) {
+    timeLeftEl.textContent = String(Math.ceil(gameState.timeRemainingMs / 1000));
+  }
   gameLoop.start();
 }
 
