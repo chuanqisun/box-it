@@ -116,10 +116,11 @@ export function createGameStateEntity(): EntityData {
 
 /**
  * Create the music entity that controls background music.
+ * Music starts playing immediately when the game begins.
  */
 export function createMusicEntity(): EntityData {
   return {
-    music: { track: "none", shouldPlay: false },
+    music: { track: "background", shouldPlay: true },
   };
 }
 

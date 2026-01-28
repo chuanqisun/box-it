@@ -35,6 +35,13 @@ interface TouchPoint {
 
 export const CALIBRATION_OBJECT_IDS = ["box", "tool1", "tool2"];
 
+/** Default bounding box configurations for each object type */
+const DEFAULT_BOUNDING_BOX_CONFIG: Record<string, { width: number; height: number; xOffset: number; yOffset: number; orientationDegrees: number }> = {
+  box: { width: 400, height: 300, xOffset: 0, yOffset: 0, orientationDegrees: 32 },
+  tool1: { width: 270, height: 130, xOffset: 0, yOffset: 0, orientationDegrees: 171 },
+  tool2: { width: 200, height: 200, xOffset: 0, yOffset: 0, orientationDegrees: 0 },
+};
+
 export class CalibrationElement extends HTMLElement {
   static define() {
     if (customElements.get("calibration-element")) return;
@@ -56,17 +63,12 @@ export class CalibrationElement extends HTMLElement {
   /** Temporary storage for current object's touch signature before bounding box configuration */
   private currentSignature: ObjectSignature | null = null;
   /** Current bounding box values being configured */
-  private boundingBoxConfig = { 
-    width: 180, 
-    height: 130, 
-    xOffset: 0, 
-    yOffset: 0, 
-    orientationDegrees: 0 
-  };
+  private boundingBoxConfig = { ...DEFAULT_BOUNDING_BOX_CONFIG["box"] };
 
   connectedCallback() {
     this.#clearPreviousResults();
-    // Start with preview phase for all objects
+    // Start with preview phase for all objects, using defaults for current object
+    this.boundingBoxConfig = { ...DEFAULT_BOUNDING_BOX_CONFIG[this.objectIds[this.currentObjectIndex]] };
     this.calibrationPhase = "preview";
     this.#render();
     this.#setupCanvas();
@@ -245,14 +247,11 @@ export class CalibrationElement extends HTMLElement {
     // Clean up previous subscription to avoid memory leaks
     this.subscription?.unsubscribe();
 
-    // Reset bounding box config for the next object
-    this.boundingBoxConfig = { 
-      width: 180, 
-      height: 130, 
-      xOffset: 0, 
-      yOffset: 0, 
-      orientationDegrees: 0 
-    };
+    // Reset bounding box config for the next object with appropriate defaults
+    const nextObjectId = this.objectIds[this.currentObjectIndex];
+    this.boundingBoxConfig = nextObjectId 
+      ? { ...DEFAULT_BOUNDING_BOX_CONFIG[nextObjectId] }
+      : { width: 180, height: 130, xOffset: 0, yOffset: 0, orientationDegrees: 0 };
 
     if (this.currentObjectIndex < this.objectIds.length) {
       // Start with preview phase for all objects

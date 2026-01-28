@@ -6,7 +6,7 @@
  */
 
 // Import music file using Vite module import
-import backgroundMusicUrl from "./background.mp3";
+import backgroundMusicUrl from "./packing-line-panic.mp3";
 
 // Background music audio element
 let backgroundMusic: HTMLAudioElement | null = null;

@@ -2,6 +2,9 @@ import type { GameEntity, GameGlobal, GameWorld } from "../domain";
 import type { System } from "../engine";
 import { playSound } from "../sounds";
 
+// Flag to prevent repeated shipping sound
+let shippingInProgress = false;
+
 export const zoneSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) => {
   const boxEntity = world.entities.find((entity) => entity.box);
   if (!boxEntity?.transform || !boxEntity?.collision) return world;
@@ -22,6 +25,9 @@ export const zoneSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
 
     if (zone.zone.type === "shipping" && boxEntity.box?.hasBox && inZone) {
       shipBox(world);
+    } else if (zone.zone.type === "shipping") {
+      // Reset shipping flag when not in shipping zone or no box
+      shippingInProgress = false;
     }
     if (zone.zone.type === "restock" && !boxEntity.box?.hasBox && inZone) {
       buyBox(world);
@@ -32,11 +38,17 @@ export const zoneSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
 };
 
 function shipBox(world: GameWorld): void {
+  // Prevent repeated shipping while in zone
+  if (shippingInProgress) return;
+  
   const packed = world.entities.filter((e) => e.boxAnchor);
   if (packed.length === 0) return;
 
   const scoreEntity = world.entities.find((e) => e.score);
   if (!scoreEntity?.score) return;
+
+  // Mark shipping as in progress to prevent repeated sound/feedback
+  shippingInProgress = true;
 
   // Play shipped sound
   playSound("shipped");
@@ -163,10 +175,6 @@ function buyBox(world: GameWorld): void {
       }
       if (e.conveyor) {
         return { ...e, conveyor: { ...e.conveyor, isActive: true } };
-      }
-      // Start background music when conveyor belt begins to spin
-      if (e.music) {
-        return { ...e, music: { ...e.music, track: "background" as const, shouldPlay: true } };
       }
       return e;
     })

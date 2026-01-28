@@ -88,7 +88,7 @@ export function resetGameWorld(world: World<GameEntity, GameGlobal>): void {
         return { ...e, interactions: { rules: [] } };
       }
       if (e.music) {
-        return { ...e, music: { track: "none" as const, shouldPlay: false } };
+        return { ...e, music: { track: "background" as const, shouldPlay: true } };
       }
       return e;
     })
