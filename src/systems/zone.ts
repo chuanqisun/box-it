@@ -164,6 +164,10 @@ function buyBox(world: GameWorld): void {
       if (e.conveyor) {
         return { ...e, conveyor: { ...e.conveyor, isActive: true } };
       }
+      // Start background music when conveyor belt begins to spin
+      if (e.music) {
+        return { ...e, music: { ...e.music, track: "background" as const, shouldPlay: true } };
+      }
       return e;
     })
   );

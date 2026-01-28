@@ -19,6 +19,7 @@ import { createGameWorld, resetGameWorld } from "./game-init";
 import { GameLoop } from "./game-loop";
 import { InputHandler } from "./input-handler";
 import { createResizeObserver$ } from "./engine";
+import { preloadMusic } from "./music";
 import { preloadSounds } from "./sounds";
 import "./style.css";
 
@@ -30,6 +31,7 @@ import { inputSystem } from "./systems/input";
 import { interactionSystem } from "./systems/interaction";
 import { itemStateSystem } from "./systems/item-state";
 import { movementSystem } from "./systems/movement";
+import { musicSystem } from "./systems/music";
 import { resizeSystem } from "./systems/resize";
 import { spawningSystem } from "./systems/spawning";
 import { toolSystem } from "./systems/tool";
@@ -63,6 +65,9 @@ initCalibrationLifecycle();
 // Preload sound files (intentionally not awaited - sounds load in background)
 preloadSounds();
 
+// Preload background music (intentionally not awaited - music loads in background)
+preloadMusic();
+
 // Create game world
 const world = createGameWorld({ canvas });
 
@@ -84,7 +89,8 @@ inputHandler.init();
  * 6. Interactions
  * 7. Zone actions
  * 8. Visual feedback
- * 9. Game state evaluation
+ * 9. Audio (music)
+ * 10. Game state evaluation
  */
 const systems = [
   inputSystem,
@@ -96,6 +102,7 @@ const systems = [
   interactionSystem,
   zoneSystem,
   feedbackSystem,
+  musicSystem,
   gameStateSystem,
 ];
 

@@ -156,3 +156,10 @@ export interface WithGameState {
     itemsProcessed: number;
   };
 }
+
+export interface WithMusic {
+  music: {
+    track: "background" | "none";
+    shouldPlay: boolean;
+  };
+}

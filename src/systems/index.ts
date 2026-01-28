@@ -10,6 +10,7 @@
  * - State: Entity state management
  * - Interaction: Entity-entity interactions
  * - Feedback: Visual feedback effects
+ * - Audio: Sound and music systems
  * - Game: Game state management
  */
 
@@ -33,6 +34,9 @@ export { toolSystem } from "./tool";
 
 // Feedback Systems
 export { feedbackSystem } from "./feedback";
+
+// Audio Systems
+export { musicSystem } from "./music";
 
 // Game State Systems
 export { gameStateSystem } from "./game-state";

@@ -7,6 +7,7 @@ import type {
   WithGameState,
   WithInteractions,
   WithItemState,
+  WithMusic,
   WithName,
   WithPhysical,
   WithPointer,
@@ -42,7 +43,8 @@ export type GameEntity = {
     WithInteractions &
     WithSpawner &
     WithTool &
-    WithGameState
+    WithGameState &
+    WithMusic
 >;
 
 /**
