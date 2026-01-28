@@ -7,6 +7,7 @@
  * - Pointer state management
  */
 
+import { startBackgroundMusic } from "./audio";
 import type { GameEntity, GameGlobal } from "./domain";
 import type { World } from "./engine";
 import { initObjectTracking } from "./tracking/tracking";
@@ -175,9 +176,15 @@ export class InputHandler {
   }
 
   /**
-   * Start the conveyor belt.
+   * Start the conveyor belt and background music.
    */
   private startConveyor(): void {
+    // Check if conveyor is not already active before starting music
+    const conveyorEntity = this.world.entities.find((e) => e.conveyor);
+    if (conveyorEntity?.conveyor && !conveyorEntity.conveyor.isActive) {
+      startBackgroundMusic();
+    }
+
     this.world
       .updateEntities((entities) =>
         entities.map((e) =>
