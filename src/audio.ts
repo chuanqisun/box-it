@@ -40,6 +40,16 @@ let backgroundMusic: HTMLAudioElement | null = null;
 let isMusicPlaying = false;
 
 /**
+ * Create the background music element early without requiring user interaction.
+ */
+export function initBackgroundMusic(): void {
+  if (backgroundMusic) return;
+  backgroundMusic = new Audio(backgroundMusicUrl);
+  backgroundMusic.loop = true;
+  backgroundMusic.preload = "auto";
+}
+
+/**
  * Get or create the audio context.
  * Must be called after user interaction due to browser autoplay policies.
  */
@@ -54,6 +64,9 @@ function getAudioContext(): AudioContext {
  * Preload all sound effects into audio buffers for low-latency playback.
  */
 export async function preloadSounds(): Promise<void> {
+  // Ensure background music element exists even if sound effects preload is delayed.
+  initBackgroundMusic();
+
   const context = getAudioContext();
 
   const loadPromises = Object.entries(soundEffectUrls).map(async ([key, url]) => {
@@ -69,10 +82,7 @@ export async function preloadSounds(): Promise<void> {
 
   await Promise.all(loadPromises);
 
-  // Preload background music
-  backgroundMusic = new Audio(backgroundMusicUrl);
-  backgroundMusic.loop = true;
-  backgroundMusic.preload = "auto";
+  // Background music element already initialized by initBackgroundMusic()
 }
 
 /**
@@ -108,6 +118,9 @@ export function playSound(effect: SoundEffect): void {
  * Does nothing if music is already playing.
  */
 export function startBackgroundMusic(): void {
+  if (!backgroundMusic) {
+    initBackgroundMusic();
+  }
   if (isMusicPlaying || !backgroundMusic) return;
 
   try {

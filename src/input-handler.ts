@@ -7,7 +7,6 @@
  * - Pointer state management
  */
 
-import { startBackgroundMusic } from "./audio";
 import type { GameEntity, GameGlobal } from "./domain";
 import type { World } from "./engine";
 import { initObjectTracking } from "./tracking/tracking";
@@ -78,13 +77,13 @@ export class InputHandler {
       // rotate it by the effective rotation to get the world-space offset
       const xOffset = boundingBox?.xOffset ?? 0;
       const yOffset = boundingBox?.yOffset ?? 0;
-      
+
       // Rotate offset by effective rotation to convert from local to world coordinates
       const cos = Math.cos(effectiveRotation);
       const sin = Math.sin(effectiveRotation);
       const worldOffsetX = xOffset * cos - yOffset * sin;
       const worldOffsetY = xOffset * sin + yOffset * cos;
-      
+
       const adjustedX = x + worldOffsetX;
       const adjustedY = y + worldOffsetY;
 
@@ -111,10 +110,10 @@ export class InputHandler {
     if (this.cachedBoxDimensions?.width === width && this.cachedBoxDimensions?.height === height) {
       return;
     }
-    
+
     // Update cache
     this.cachedBoxDimensions = { width, height };
-    
+
     this.world
       .updateEntities((entities) =>
         entities.map((e) => {
@@ -146,11 +145,7 @@ export class InputHandler {
    */
   private updatePointerState(next: Partial<PointerState>): void {
     this.pointerState = { ...this.pointerState, ...next };
-    this.world
-      .updateEntities((entities) =>
-        entities.map((e) => (e.pointer ? { ...e, pointer: { ...this.pointerState } } : e))
-      )
-      .next();
+    this.world.updateEntities((entities) => entities.map((e) => (e.pointer ? { ...e, pointer: { ...this.pointerState } } : e))).next();
   }
 
   /**
@@ -179,20 +174,8 @@ export class InputHandler {
    * Start the conveyor belt and background music.
    */
   private startConveyor(): void {
-    // Check if conveyor is not already active before starting music
-    const conveyorEntity = this.world.entities.find((e) => e.conveyor);
-    if (conveyorEntity?.conveyor && !conveyorEntity.conveyor.isActive) {
-      startBackgroundMusic();
-    }
-
     this.world
-      .updateEntities((entities) =>
-        entities.map((e) =>
-          e.conveyor && !e.conveyor.isActive
-            ? { ...e, conveyor: { ...e.conveyor, isActive: true } }
-            : e
-        )
-      )
+      .updateEntities((entities) => entities.map((e) => (e.conveyor && !e.conveyor.isActive ? { ...e, conveyor: { ...e.conveyor, isActive: true } } : e)))
       .next();
   }
 

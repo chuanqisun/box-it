@@ -15,7 +15,7 @@
  */
 
 import { initSettings } from "./ai/settings";
-import { preloadSounds, stopBackgroundMusic } from "./audio";
+import { initBackgroundMusic, preloadSounds, startBackgroundMusic } from "./audio";
 import { createResizeObserver$ } from "./engine";
 import { createGameWorld, resetGameWorld } from "./game-init";
 import { GameLoop } from "./game-loop";
@@ -60,6 +60,7 @@ const restartGameBtn = document.getElementById("restartGame") as HTMLButtonEleme
 // Initialize settings and calibration
 initSettings();
 initCalibrationLifecycle();
+initBackgroundMusic();
 
 // Create game world
 const world = createGameWorld({ canvas });
@@ -154,14 +155,13 @@ startGameBtn.addEventListener("click", () => {
   startMenu.close();
   // Preload sounds on first user interaction (browser autoplay policy)
   preloadSounds();
+  startBackgroundMusic();
   startGame();
 });
 
 restartGameBtn.addEventListener("click", () => {
   endGameMenu.close();
-  stopBackgroundMusic();
-  // Reload the page for a clean restart (clears AI generation state)
-  window.location.reload();
+  startGame();
 });
 
 // Handle window resize
