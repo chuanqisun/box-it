@@ -145,8 +145,8 @@ describe("Entity Factories", () => {
 
     it("should start with full time remaining", () => {
       const entity = createGameStateEntity();
-      expect(entity.gameState!.durationMs).toBe(60_000);
-      expect(entity.gameState!.timeRemainingMs).toBe(60_000);
+      expect(entity.gameState!.durationMs).toBe(30_000);
+      expect(entity.gameState!.timeRemainingMs).toBe(30_000);
     });
   });
 

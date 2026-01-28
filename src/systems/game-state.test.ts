@@ -24,7 +24,7 @@ describe("gameStateSystem", () => {
           status: "playing",
           totalItemsSpawned: 0,
           itemsProcessed: 0,
-          durationMs: 60_000,
+          durationMs: 30_000,
           timeRemainingMs: 30_000,
         },
       });
@@ -42,7 +42,7 @@ describe("gameStateSystem", () => {
           status: "playing",
           totalItemsSpawned: 0,
           itemsProcessed: 0,
-          durationMs: 60_000,
+          durationMs: 30_000,
           timeRemainingMs: 500,
         },
       });
@@ -62,7 +62,7 @@ describe("gameStateSystem", () => {
           status: "won",
           totalItemsSpawned: 5,
           itemsProcessed: 5,
-          durationMs: 60_000,
+          durationMs: 30_000,
           timeRemainingMs: 0,
         },
       });
@@ -79,7 +79,7 @@ describe("gameStateSystem", () => {
           status: "lost",
           totalItemsSpawned: 5,
           itemsProcessed: 5,
-          durationMs: 60_000,
+          durationMs: 30_000,
           timeRemainingMs: 0,
         },
       });
