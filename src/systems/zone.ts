@@ -1,11 +1,7 @@
 import type { GameEntity, GameGlobal, GameWorld } from "../domain";
 import type { System } from "../engine";
+import { playBackgroundMusic } from "../music";
 import { playSound } from "../sounds";
-
-// Flag to prevent repeated shipping sound
-let shippingInProgress = false;
-// Flag to prevent repeated buyBox calls
-let buyBoxInProgress = false;
 
 /**
  * Check if a rotated rectangle overlaps with an axis-aligned rectangle (zone).
@@ -113,16 +109,11 @@ export const zoneSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
       zone.collision.height
     );
 
-    if (zone.zone.type === "shipping") {
-      if (hasBox && overlapsZone) {
-        shipBox(world);
-      } else {
-        // Reset shipping flag when box leaves shipping zone
-        shippingInProgress = false;
-      }
+    if (zone.zone.type === "shipping" && hasBox && overlapsZone) {
+      shipBox(world);
     }
     
-    if (zone.zone.type === "restock") {
+    if (zone.zone.type === "restock" && !hasBox) {
       // For restock, check if pointer is in zone (no box yet)
       const pointer = world.entities.find((e) => e.pointer)?.pointer;
       if (!pointer) continue;
@@ -133,11 +124,8 @@ export const zoneSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
         pointer.y >= zone.transform.y &&
         pointer.y <= zone.transform.y + zone.collision.height;
 
-      if (!hasBox && pointerInZone) {
+      if (pointerInZone) {
         buyBox(world);
-      } else {
-        // Reset buyBox flag when leaving zone or has box
-        buyBoxInProgress = false;
       }
     }
   }
@@ -146,19 +134,14 @@ export const zoneSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
 };
 
 function shipBox(world: GameWorld): void {
-  // Prevent repeated shipping while in zone
-  if (shippingInProgress) return;
-  
   const packed = world.entities.filter((e) => e.boxAnchor);
+  // Only ship if there are packed items
   if (packed.length === 0) return;
 
   const scoreEntity = world.entities.find((e) => e.score);
   if (!scoreEntity?.score) return;
 
-  // Mark shipping as in progress to prevent repeated sound/feedback
-  shippingInProgress = true;
-
-  // Play shipped sound
+  // Play shipped sound once
   playSound("shipped");
 
   let boxValue = 0;
@@ -212,14 +195,16 @@ function shipBox(world: GameWorld): void {
 }
 
 function buyBox(world: GameWorld): void {
-  // Prevent repeated buyBox calls while in zone
-  if (buyBoxInProgress) return;
-
   const scoreEntity = world.entities.find((e) => e.score);
   const pointer = world.entities.find((e) => e.pointer)?.pointer;
   if (!scoreEntity?.score || !pointer) return;
 
+  // Check if player already has a box (prevent repeated calls)
+  const boxEntity = world.entities.find((e) => e.box);
+  if (boxEntity?.box?.hasBox) return;
+
   if (scoreEntity.score.value < 200) {
+    // Only show insufficient funds message once per attempt
     const feedback = {
       text: "INSUFFICIENT FUNDS",
       x: 150,
@@ -246,9 +231,6 @@ function buyBox(world: GameWorld): void {
     return;
   }
 
-  // Mark buyBox as in progress to prevent repeated calls
-  buyBoxInProgress = true;
-
   // Play get box sound
   playSound("getBox");
 
@@ -261,6 +243,10 @@ function buyBox(world: GameWorld): void {
     life: 1,
     velocityY: -1,
   };
+
+  // Check if conveyor is already active (music already playing)
+  const conveyor = world.entities.find((e) => e.conveyor)?.conveyor;
+  const isFirstBox = !conveyor?.isActive;
 
   world.updateEntities((entities) =>
     entities.map((e) => {
@@ -293,4 +279,9 @@ function buyBox(world: GameWorld): void {
       return e;
     })
   );
+
+  // Start background music when conveyor belt starts spinning (first box)
+  if (isFirstBox) {
+    playBackgroundMusic();
+  }
 }

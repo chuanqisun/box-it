@@ -115,16 +115,6 @@ export function createGameStateEntity(): EntityData {
 }
 
 /**
- * Create the music entity that controls background music.
- * Music starts playing immediately when the game begins.
- */
-export function createMusicEntity(): EntityData {
-  return {
-    music: { track: "background", shouldPlay: true },
-  };
-}
-
-/**
  * Create an item entity that spawns on the conveyor.
  */
 export function createItemEntity(

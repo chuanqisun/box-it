@@ -31,7 +31,6 @@ import { inputSystem } from "./systems/input";
 import { interactionSystem } from "./systems/interaction";
 import { itemStateSystem } from "./systems/item-state";
 import { movementSystem } from "./systems/movement";
-import { musicSystem } from "./systems/music";
 import { resizeSystem } from "./systems/resize";
 import { spawningSystem } from "./systems/spawning";
 import { toolSystem } from "./systems/tool";
@@ -89,8 +88,7 @@ inputHandler.init();
  * 6. Interactions
  * 7. Zone actions
  * 8. Visual feedback
- * 9. Audio (music)
- * 10. Game state evaluation
+ * 9. Game state evaluation
  */
 const systems = [
   inputSystem,
@@ -102,7 +100,6 @@ const systems = [
   interactionSystem,
   zoneSystem,
   feedbackSystem,
-  musicSystem,
   gameStateSystem,
 ];
 

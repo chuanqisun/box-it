@@ -18,7 +18,6 @@ import {
   createToolEntity,
   createScoreEntity,
   createGameStateEntity,
-  createMusicEntity,
   EntityConstants,
 } from "./entities/factories";
 
@@ -53,9 +52,7 @@ export function createGameWorld(config: GameInitConfig): World<GameEntity, GameG
     .addEntity(createToolEntity("tool2", window.innerWidth - TOOL_SIZE - 40, 40))
     // Game state entities
     .addEntity(createScoreEntity(initialScore))
-    .addEntity(createGameStateEntity())
-    // Audio entities
-    .addEntity(createMusicEntity());
+    .addEntity(createGameStateEntity());
 
   return world;
 }
@@ -86,9 +83,6 @@ export function resetGameWorld(world: World<GameEntity, GameGlobal>): void {
       }
       if (e.interactions) {
         return { ...e, interactions: { rules: [] } };
-      }
-      if (e.music) {
-        return { ...e, music: { track: "background" as const, shouldPlay: true } };
       }
       return e;
     })
