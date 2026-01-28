@@ -9,6 +9,12 @@ const BOX_COLOR = "#d2b48c";
 const BOX_INTERIOR_COLOR = "#8b5a2b";
 const ITEM_SIZE = 45;
 
+const OBJECT_DISPLAY_NAMES: Record<string, string> = {
+  box: "BOX",
+  tool1: "TAPE",
+  tool2: "IRON",
+};
+
 export function drawWorld(ctx: CanvasRenderingContext2D, world: GameWorld) {
   ctx.fillStyle = FLOOR_COLOR;
   ctx.fillRect(0, 0, world.global.canvas.width, world.global.canvas.height);
@@ -83,7 +89,7 @@ function drawTools(ctx: CanvasRenderingContext2D, world: GameWorld) {
     ctx.font = "bold 16px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(tool.tool.id.toUpperCase(), 0, 0);
+    ctx.fillText(OBJECT_DISPLAY_NAMES[tool.tool.id] || tool.tool.id.toUpperCase(), 0, 0);
     ctx.restore();
   }
 }

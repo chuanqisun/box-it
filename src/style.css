@@ -9,6 +9,10 @@
   box-sizing: border-box;
 }
 
+.hidden {
+  display: none !important;
+}
+
 html,
 body {
   width: 100%;
@@ -376,4 +380,119 @@ canvas {
 
 .end-game-dialog .dialog-footer {
   justify-content: center;
+}
+
+/* High Scores Section */
+.high-scores-section {
+  margin-top: 20px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 12px;
+  border: 1px solid #333;
+}
+
+.high-scores-title {
+  font-size: 16px;
+  color: #f1c40f;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+}
+
+.high-scores-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.high-score-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  border: 1px solid #444;
+}
+
+.high-score-entry.current-score {
+  border-color: #f1c40f;
+  background: rgba(241, 196, 15, 0.1);
+}
+
+.high-score-rank {
+  font-size: 18px;
+  font-weight: 700;
+  color: #888;
+  width: 30px;
+}
+
+.high-score-entry:nth-child(1) .high-score-rank {
+  color: #ffd700;
+}
+
+.high-score-entry:nth-child(2) .high-score-rank {
+  color: #c0c0c0;
+}
+
+.high-score-entry:nth-child(3) .high-score-rank {
+  color: #cd7f32;
+}
+
+.high-score-name {
+  flex: 1;
+  text-align: left;
+  font-size: 14px;
+  color: #fff;
+  margin-left: 8px;
+}
+
+.high-score-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f1c40f;
+}
+
+.high-scores-empty {
+  color: #888;
+  font-style: italic;
+  font-size: 14px;
+}
+
+.name-input-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #333;
+}
+
+.new-high-score-message {
+  color: #2ecc71;
+  font-weight: 600;
+  margin-bottom: 12px;
+  font-size: 16px;
+}
+
+.name-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.name-input-row input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid #444;
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+}
+
+.name-input-row input:focus {
+  border-color: rgba(241, 196, 15, 0.8);
+  box-shadow: 0 0 0 2px rgba(241, 196, 15, 0.2);
+}
+
+.name-input-row .btn {
+  flex-shrink: 0;
 }
