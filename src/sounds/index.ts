@@ -36,8 +36,13 @@ const audioCache: Map<SoundEffect, HTMLAudioElement> = new Map();
 /**
  * Preload all sound files to reduce playback latency.
  * Call this at application startup.
+ *
+ * Note: This function is intentionally not awaited in main.ts because:
+ * 1. We don't want to block game startup waiting for sounds
+ * 2. The playSound function gracefully handles unloaded sounds
+ * 3. Sounds typically load quickly and will be ready by the time they're needed
  */
-export function preloadSounds(): Promise<void[]> {
+export function preloadSounds(): Promise<void> {
   const loadPromises = Object.entries(soundUrls).map(([name, url]) => {
     return new Promise<void>((resolve) => {
       const audio = new Audio(url);
@@ -59,7 +64,7 @@ export function preloadSounds(): Promise<void[]> {
     });
   });
 
-  return Promise.all(loadPromises);
+  return Promise.all(loadPromises).then(() => {});
 }
 
 /**

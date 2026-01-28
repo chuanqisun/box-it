@@ -60,7 +60,7 @@ const restartGameBtn = document.getElementById("restartGame") as HTMLButtonEleme
 initSettings();
 initCalibrationLifecycle();
 
-// Preload sound files
+// Preload sound files (intentionally not awaited - sounds load in background)
 preloadSounds();
 
 // Create game world
