@@ -15,6 +15,7 @@
  */
 
 import { initSettings } from "./ai/settings";
+import { preloadSounds, stopBackgroundMusic } from "./audio";
 import { createGameWorld, resetGameWorld } from "./game-init";
 import { GameLoop } from "./game-loop";
 import { InputHandler } from "./input-handler";
@@ -142,11 +143,14 @@ startMenu.showModal();
 
 startGameBtn.addEventListener("click", () => {
   startMenu.close();
+  // Preload sounds on first user interaction (browser autoplay policy)
+  preloadSounds();
   startGame();
 });
 
 restartGameBtn.addEventListener("click", () => {
   endGameMenu.close();
+  stopBackgroundMusic();
   // Reload the page for a clean restart (clears AI generation state)
   window.location.reload();
 });
