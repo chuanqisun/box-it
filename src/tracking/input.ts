@@ -172,9 +172,11 @@ function findGlobalThreePointMatches(
   const availableTouches = touches.filter((t) => !usedTouchIds.has(t.id));
   if (availableTouches.length < 3) return [];
 
+  // Build all possible 3-point combinations once (performance optimization)
+  const combinations = buildTouchCombinations(availableTouches);
+
   // Find all valid combinations for each object
   const stateCandidates = states.map((state) => {
-    const combinations = buildTouchCombinations(availableTouches);
     const validMatches: Array<{
       points: [TouchPoint, TouchPoint, TouchPoint];
       touchIds: [number, number, number];
@@ -203,7 +205,7 @@ function findGlobalThreePointMatches(
     return { state, candidates: validMatches };
   });
 
-  // Find the best global assignment using a simple greedy approach with backtracking
+  // Find the best global assignment using backtracking
   return findBestAssignment(stateCandidates);
 }
 
@@ -250,6 +252,9 @@ function findBestAssignment(
     usedTouches: Set<number>,
     currentScore: number
   ): void {
+    // Prune branches that can't possibly beat the current best
+    if (currentScore >= bestTotalScore) return;
+
     // Base case: we've assigned all states
     if (stateIndex >= validStates.length) {
       if (currentScore < bestTotalScore) {
@@ -291,7 +296,8 @@ function findBestAssignment(
 
   tryAssignment(0, [], new Set(), 0);
 
-  return bestAssignment;
+  // Return assignments without the score field (not needed by caller)
+  return bestAssignment.map(({ state, points, touchIds }) => ({ state, points, touchIds }));
 }
 
 /**
@@ -322,7 +328,7 @@ function updateObjectStateWithPoints(
   const type = state.isActive ? "move" : "down";
 
   state.points = points;
-  state.touchIds = touchIds;
+  state.touchIds = [touchIds[0], touchIds[1], touchIds[2]];
   state.activePointIndices = new Set([0, 1, 2]);
   state.position = newPosition;
   state.rotation = newRotation;
@@ -352,15 +358,14 @@ function computeObjectUpdates(
 
   // Check if we should use global matching
   const states = Array.from(objectStates.values());
-  const availableTouches = touches.filter((t) => !usedTouchIds.has(t.id));
   
   // Use global matching when we have:
   // - Multiple objects (2+)
   // - Enough touches for multiple 3-point matches (6+)
-  const shouldUseGlobalMatching = states.length >= 2 && availableTouches.length >= 6;
+  const shouldUseGlobalMatching = states.length >= 2 && touches.length >= 6;
   
   if (shouldUseGlobalMatching) {
-    const globalMatches = findGlobalThreePointMatches(states, availableTouches, usedTouchIds);
+    const globalMatches = findGlobalThreePointMatches(states, touches, usedTouchIds);
     
     // Process global matches
     for (const { state, points, touchIds } of globalMatches) {
