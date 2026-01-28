@@ -1,5 +1,6 @@
 import type { FeedbackEffect } from "./components";
 import type { GameEntity, GameWorld } from "./domain";
+import { emojiToPixelArt } from "./pixel-emoji";
 
 const FLOOR_COLOR = "#2a2a2a";
 const CONVEYOR_COLOR = "#1a1a1a";
@@ -182,6 +183,8 @@ function drawBox(ctx: CanvasRenderingContext2D, world: GameWorld) {
   ctx.rect(left + wall, top + wall, box.collision.width - wall * 2, box.collision.height - wall * 2);
   ctx.clip();
 
+  const PACKED_ITEM_SIZE = 30;
+
   world.entities
     .filter((e) => e.boxAnchor)
     .forEach((packed) => {
@@ -200,10 +203,10 @@ function drawBox(ctx: CanvasRenderingContext2D, world: GameWorld) {
         ctx.shadowOffsetY = 2;
       }
 
-      ctx.font = "30px Arial";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(packed.render?.emoji ?? "📦", 0, 0);
+      // Render as pixel art
+      const emoji = packed.render?.emoji ?? "📦";
+      const pixelArt = emojiToPixelArt(emoji, PACKED_ITEM_SIZE);
+      ctx.drawImage(pixelArt, -PACKED_ITEM_SIZE / 2, -PACKED_ITEM_SIZE / 2, PACKED_ITEM_SIZE, PACKED_ITEM_SIZE);
 
       if (packed.quality?.isBad) {
         ctx.fillStyle = "rgba(255,0,0,0.8)";
@@ -296,10 +299,12 @@ function drawItem(ctx: CanvasRenderingContext2D, item: GameEntity) {
   ctx.shadowBlur = shadowBlur;
   ctx.shadowOffsetY = shadowY;
 
-  ctx.font = `${item.physical?.size ?? ITEM_SIZE}px Arial`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(item.render?.emoji ?? "📦", 0, 0);
+  // Render as pixel art
+  const emoji = item.render?.emoji ?? "📦";
+  const size = item.physical?.size ?? ITEM_SIZE;
+  const pixelArt = emojiToPixelArt(emoji, size);
+  ctx.drawImage(pixelArt, -size / 2, -size / 2, size, size);
+
   ctx.restore();
 }
 
