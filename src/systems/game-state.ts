@@ -17,6 +17,7 @@ export const gameStateSystem: System<GameEntity, GameGlobal> = (world, _deltaTim
   const score = scoreEntity.score.value;
   const hasBox = boxEntity.box.hasBox;
   const queueEmpty = spawnerEntity.spawner.queue.length === 0;
+  const allItemsGenerated = spawnerEntity.spawner.allItemsGenerated;
 
   // Count items still on belt or falling (not packed)
   const activeItems = world.entities.filter(
@@ -37,9 +38,11 @@ export const gameStateSystem: System<GameEntity, GameGlobal> = (world, _deltaTim
     );
   }
 
-  // Win condition: All items spawned, no items on belt/falling, no packed items, queue is empty
+  // Win condition: All items generated and spawned, no items on belt/falling, no packed items, queue is empty
   // The spawner must have started (totalItemsSpawned > 0) to prevent winning immediately
+  // Must also wait for all items to be generated from the stream (allItemsGenerated)
   if (
+    allItemsGenerated &&
     queueEmpty &&
     activeItems.length === 0 &&
     packedItems.length === 0 &&

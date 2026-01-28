@@ -76,7 +76,7 @@ export function resetGameWorld(world: World<GameEntity, GameGlobal>): void {
         return { ...e, conveyor: { ...e.conveyor, isActive: false, offset: 0 } };
       }
       if (e.spawner) {
-        return { ...e, spawner: { ...e.spawner, timer: 0, queue: [] } };
+        return { ...e, spawner: { ...e.spawner, timer: 0, queue: [], allItemsGenerated: false } };
       }
       if (e.feedback) {
         return { ...e, feedback: { effects: [] } };

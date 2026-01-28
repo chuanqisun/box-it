@@ -45,7 +45,7 @@ export function createConveyorEntity(canvasHeight: number): EntityData {
       width: 300,
       length: canvasHeight * 0.55,
     },
-    spawner: { timer: 0, interval: 1000, queue: [] },
+    spawner: { timer: 0, interval: 1000, queue: [], allItemsGenerated: false },
   };
 }
 

@@ -68,6 +68,7 @@ export interface WithSpawner {
     timer: number;
     interval: number;
     queue: ItemDescriptor[];
+    allItemsGenerated: boolean;
   };
 }
 

@@ -23,7 +23,7 @@ describe("gameStateSystem", () => {
         .addEntity({ gameState: { status: "playing", totalItemsSpawned: 5, itemsProcessed: 3 } })
         .addEntity({ score: { value: 100, packedCount: 0 } })
         .addEntity({ box: { hasBox: false } })
-        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [] } });
+        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [], allItemsGenerated: false } });
 
       gameStateSystem(world, 16);
 
@@ -36,7 +36,7 @@ describe("gameStateSystem", () => {
         .addEntity({ gameState: { status: "playing", totalItemsSpawned: 5, itemsProcessed: 3 } })
         .addEntity({ score: { value: 100, packedCount: 0 } })
         .addEntity({ box: { hasBox: true } })
-        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [] } });
+        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [], allItemsGenerated: false } });
 
       gameStateSystem(world, 16);
 
@@ -49,7 +49,7 @@ describe("gameStateSystem", () => {
         .addEntity({ gameState: { status: "playing", totalItemsSpawned: 5, itemsProcessed: 3 } })
         .addEntity({ score: { value: 200, packedCount: 0 } })
         .addEntity({ box: { hasBox: false } })
-        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [] } });
+        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [], allItemsGenerated: false } });
 
       gameStateSystem(world, 16);
 
@@ -59,12 +59,12 @@ describe("gameStateSystem", () => {
   });
 
   describe("win condition", () => {
-    it("should set status to won when all items processed", () => {
+    it("should set status to won when all items processed and generation complete", () => {
       world
         .addEntity({ gameState: { status: "playing", totalItemsSpawned: 5, itemsProcessed: 5 } })
         .addEntity({ score: { value: 1000, packedCount: 0 } })
         .addEntity({ box: { hasBox: true } })
-        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [] } });
+        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [], allItemsGenerated: true } });
 
       gameStateSystem(world, 16);
 
@@ -72,12 +72,25 @@ describe("gameStateSystem", () => {
       expect(gameState?.status).toBe("won");
     });
 
+    it("should not win if items are still being generated", () => {
+      world
+        .addEntity({ gameState: { status: "playing", totalItemsSpawned: 5, itemsProcessed: 5 } })
+        .addEntity({ score: { value: 1000, packedCount: 0 } })
+        .addEntity({ box: { hasBox: true } })
+        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [], allItemsGenerated: false } });
+
+      gameStateSystem(world, 16);
+
+      const gameState = world.entities.find((e) => e.gameState)?.gameState;
+      expect(gameState?.status).toBe("playing");
+    });
+
     it("should not win if items are still in queue", () => {
       world
         .addEntity({ gameState: { status: "playing", totalItemsSpawned: 5, itemsProcessed: 5 } })
         .addEntity({ score: { value: 1000, packedCount: 0 } })
         .addEntity({ box: { hasBox: true } })
-        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [{ name: "apple", emoji: "🍎" }] } });
+        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [{ name: "apple", emoji: "🍎" }], allItemsGenerated: true } });
 
       gameStateSystem(world, 16);
 
@@ -90,7 +103,7 @@ describe("gameStateSystem", () => {
         .addEntity({ gameState: { status: "playing", totalItemsSpawned: 5, itemsProcessed: 5 } })
         .addEntity({ score: { value: 1000, packedCount: 0 } })
         .addEntity({ box: { hasBox: true } })
-        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [] } })
+        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [], allItemsGenerated: true } })
         .addEntity({ itemState: { state: "belt", fallScale: 1 }, transform: { x: 0, y: 0, rotation: 0, scale: 1 } });
 
       gameStateSystem(world, 16);
@@ -104,7 +117,7 @@ describe("gameStateSystem", () => {
         .addEntity({ gameState: { status: "playing", totalItemsSpawned: 5, itemsProcessed: 5 } })
         .addEntity({ score: { value: 1000, packedCount: 0 } })
         .addEntity({ box: { hasBox: true } })
-        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [] } })
+        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [], allItemsGenerated: true } })
         .addEntity({ boxAnchor: { relX: 10, relY: 10 } });
 
       gameStateSystem(world, 16);
@@ -118,7 +131,7 @@ describe("gameStateSystem", () => {
         .addEntity({ gameState: { status: "playing", totalItemsSpawned: 0, itemsProcessed: 0 } })
         .addEntity({ score: { value: 1000, packedCount: 0 } })
         .addEntity({ box: { hasBox: true } })
-        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [] } });
+        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [], allItemsGenerated: true } });
 
       gameStateSystem(world, 16);
 
@@ -133,7 +146,7 @@ describe("gameStateSystem", () => {
         .addEntity({ gameState: { status: "won", totalItemsSpawned: 5, itemsProcessed: 5 } })
         .addEntity({ score: { value: 50, packedCount: 0 } })
         .addEntity({ box: { hasBox: false } })
-        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [] } });
+        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [], allItemsGenerated: true } });
 
       gameStateSystem(world, 16);
 
@@ -146,7 +159,7 @@ describe("gameStateSystem", () => {
         .addEntity({ gameState: { status: "lost", totalItemsSpawned: 5, itemsProcessed: 5 } })
         .addEntity({ score: { value: 1000, packedCount: 0 } })
         .addEntity({ box: { hasBox: true } })
-        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [] } });
+        .addEntity({ spawner: { timer: 0, interval: 1000, queue: [], allItemsGenerated: true } });
 
       gameStateSystem(world, 16);
 

@@ -25,6 +25,11 @@ export const spawningSystem: System<GameEntity, GameGlobal> = (world, deltaTime)
       next: (item) => {
         world.updateEntities((entities) => entities.map((e) => (e.spawner ? { ...e, spawner: { ...e.spawner, queue: [...e.spawner.queue, item] } } : e)));
       },
+      complete: () => {
+        world.updateEntities((entities) =>
+          entities.map((e) => (e.spawner ? { ...e, spawner: { ...e.spawner, allItemsGenerated: true } } : e))
+        );
+      },
     });
 
     simulateInteractions$(items$, 30)

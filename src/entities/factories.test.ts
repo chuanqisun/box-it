@@ -38,11 +38,12 @@ describe("Entity Factories", () => {
       expect(entity.conveyor!.width).toBe(300);
     });
 
-    it("should include spawner component", () => {
+    it("should include spawner component with allItemsGenerated flag", () => {
       const entity = createConveyorEntity(800);
       expect(entity.spawner).toBeDefined();
       expect(entity.spawner!.queue).toEqual([]);
       expect(entity.spawner!.timer).toBe(0);
+      expect(entity.spawner!.allItemsGenerated).toBe(false);
     });
   });
 
