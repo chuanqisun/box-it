@@ -1,5 +1,5 @@
 import { fromEvent, merge, Observable } from "rxjs";
-import { getCanonicalRotation, getCentroid, calculateSortedSides } from "./geometry";
+import { calculateSortedSides, getCanonicalRotation, getCentroid } from "./geometry";
 
 export function getInputRawEvent$(targetArea: HTMLElement): Observable<TouchEvent> {
   const touchstart$ = fromEvent<TouchEvent>(targetArea, "touchstart");
@@ -59,11 +59,7 @@ interface TrackedObjectState {
   rotation?: number;
 }
 
-export function getObjectEvents(
-  rawEvents$: Observable<TouchEvent>,
-  context: ObjectTrackingContext,
-  targetElement: HTMLElement
-): Observable<ObjectUpdate> {
+export function getObjectEvents(rawEvents$: Observable<TouchEvent>, context: ObjectTrackingContext, targetElement: HTMLElement): Observable<ObjectUpdate> {
   return new Observable<ObjectUpdate>((subscriber) => {
     const touchPoints = new Map<number, TouchPoint>();
     const objectStates = new Map<string, TrackedObjectState>(
@@ -110,17 +106,14 @@ export function getObjectEvents(
 
 /**
  * Simple object detection using triangle side matching.
- * 
+ *
  * Algorithm:
  * 1. Generate all 3-point combinations from touch points
  * 2. Calculate sorted side lengths for each combination
  * 3. Find the closest match to each known object's signature
  * 4. Ensure no touch point is used by multiple objects
  */
-function detectObjects(
-  touches: TouchPoint[],
-  objectStates: Map<string, TrackedObjectState>
-): ObjectUpdate[] {
+function detectObjects(touches: TouchPoint[], objectStates: Map<string, TrackedObjectState>): ObjectUpdate[] {
   const updates: ObjectUpdate[] = [];
 
   if (touches.length < 3) {
@@ -144,25 +137,25 @@ function detectObjects(
 
   // Generate all 3-point combinations
   const combinations = generateCombinations(touches);
-  
+
   // Score each combination against each object and find best matches
   const matches = findBestMatches(combinations, objectStates);
 
   // Process matches and emit updates
   const matchedStateIds = new Set<string>();
-  
+
   for (const match of matches) {
     const state = objectStates.get(match.stateId)!;
     matchedStateIds.add(match.stateId);
-    
+
     const position = getCentroid(match.points);
     const rotation = getCanonicalRotation(match.points, state.rotation);
     const type = state.isActive ? "move" : "down";
-    
+
     state.position = position;
     state.rotation = rotation;
     state.isActive = true;
-    
+
     updates.push({
       id: state.id,
       type,
@@ -199,7 +192,7 @@ function detectObjects(
 function generateCombinations(touches: TouchPoint[]): TouchPoint[][] {
   const combinations: TouchPoint[][] = [];
   const n = touches.length;
-  
+
   for (let i = 0; i < n - 2; i++) {
     for (let j = i + 1; j < n - 1; j++) {
       for (let k = j + 1; k < n; k++) {
@@ -207,7 +200,7 @@ function generateCombinations(touches: TouchPoint[]): TouchPoint[][] {
       }
     }
   }
-  
+
   return combinations;
 }
 
@@ -217,11 +210,7 @@ function generateCombinations(touches: TouchPoint[]): TouchPoint[][] {
  */
 function getSideError(points: TouchPoint[], signature: [number, number, number]): number {
   const sides = calculateSortedSides(points);
-  return (
-    Math.abs(sides[0] - signature[0]) +
-    Math.abs(sides[1] - signature[1]) +
-    Math.abs(sides[2] - signature[2])
-  );
+  return Math.abs(sides[0] - signature[0]) + Math.abs(sides[1] - signature[1]) + Math.abs(sides[2] - signature[2]);
 }
 
 /** Maximum allowed total error across all 3 sides (in pixels) */
@@ -269,7 +258,7 @@ function findBestMatches(
   for (const candidate of candidates) {
     // Skip if this object already has a match
     if (matchedStateIds.has(candidate.stateId)) continue;
-    
+
     // Skip if any touch point is already used
     let hasOverlap = false;
     for (const id of candidate.touchIds) {
@@ -286,7 +275,7 @@ function findBestMatches(
       points: candidate.points,
       error: candidate.error,
     });
-    
+
     for (const id of candidate.touchIds) {
       usedTouchIds.add(id);
     }
