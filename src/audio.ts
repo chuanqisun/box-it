@@ -37,7 +37,6 @@ let audioContext: AudioContext | null = null;
 
 // Background music element
 let backgroundMusic: HTMLAudioElement | null = null;
-let isMusicPlaying = false;
 
 /**
  * Get or create the audio context.
@@ -108,7 +107,7 @@ export function playSound(effect: SoundEffect): void {
  * Does nothing if music is already playing.
  */
 export function startBackgroundMusic(): void {
-  if (isMusicPlaying || !backgroundMusic) return;
+  if (!backgroundMusic || !backgroundMusic.paused) return;
 
   try {
     // Resume audio context if needed
@@ -119,7 +118,6 @@ export function startBackgroundMusic(): void {
     backgroundMusic.play().catch((error) => {
       console.warn("Failed to start background music:", error);
     });
-    isMusicPlaying = true;
   } catch (error) {
     console.warn("Failed to start background music:", error);
   }
@@ -129,16 +127,15 @@ export function startBackgroundMusic(): void {
  * Stop the background music.
  */
 export function stopBackgroundMusic(): void {
-  if (!isMusicPlaying || !backgroundMusic) return;
+  if (!backgroundMusic) return;
 
   backgroundMusic.pause();
   backgroundMusic.currentTime = 0;
-  isMusicPlaying = false;
 }
 
 /**
  * Check if background music is currently playing.
  */
 export function isMusicCurrentlyPlaying(): boolean {
-  return isMusicPlaying;
+  return backgroundMusic !== null && !backgroundMusic.paused;
 }

@@ -1,4 +1,4 @@
-import { playSound } from "../audio";
+import { playSound, startBackgroundMusic } from "../audio";
 import type { GameEntity, GameGlobal, GameWorld } from "../domain";
 import type { System } from "../engine";
 
@@ -43,6 +43,7 @@ export const zoneSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
       );
       if (boxInZone) {
         shipBox(world);
+        break; // Only trigger once per frame
       }
     }
 
@@ -63,6 +64,7 @@ export const zoneSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
       );
       if (pointerInZone) {
         buyBox(world);
+        break; // Only trigger once per frame
       }
     }
   }
@@ -162,8 +164,9 @@ function buyBox(world: GameWorld): void {
     return;
   }
 
-  // Play get box sound
+  // Play get box sound and start background music
   playSound("getBox");
+  startBackgroundMusic();
 
   const feedback = {
     text: "NEW BOX -$200",
