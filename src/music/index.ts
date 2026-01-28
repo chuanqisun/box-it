@@ -21,14 +21,22 @@ export function preloadMusic(): Promise<void> {
     backgroundMusic.preload = "auto";
     backgroundMusic.loop = true;
 
-    backgroundMusic.addEventListener("canplaythrough", () => {
-      resolve();
-    }, { once: true });
+    backgroundMusic.addEventListener(
+      "canplaythrough",
+      () => {
+        resolve();
+      },
+      { once: true }
+    );
 
-    backgroundMusic.addEventListener("error", () => {
-      console.warn("Failed to preload background music");
-      resolve();
-    }, { once: true });
+    backgroundMusic.addEventListener(
+      "error",
+      () => {
+        console.warn("Failed to preload background music");
+        resolve();
+      },
+      { once: true }
+    );
 
     backgroundMusic.load();
   });
@@ -49,6 +57,7 @@ export function playBackgroundMusic(): void {
     return;
   }
 
+  debugger;
   backgroundMusic.play().catch((error) => {
     console.debug("Background music playback blocked:", error);
   });
