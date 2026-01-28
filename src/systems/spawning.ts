@@ -6,7 +6,7 @@ import type { System } from "../engine";
 
 const ITEM_SPEED_BELT = 250;
 const ITEM_SIZE = 45;
-const GAME_DURATION_MS = 60_000;
+const GAME_DURATION_MS = 30_000;
 const TARGET_ITEMS = 60;
 const BASE_SPAWN_INTERVAL = GAME_DURATION_MS / TARGET_ITEMS;
 

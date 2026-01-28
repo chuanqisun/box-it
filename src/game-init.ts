@@ -70,8 +70,8 @@ export function resetGameWorld(world: World<GameEntity, GameGlobal>): void {
             status: "playing" as const,
             totalItemsSpawned: 0,
             itemsProcessed: 0,
-            durationMs: 60_000,
-            timeRemainingMs: 60_000,
+            durationMs: 30_000,
+            timeRemainingMs: 30_000,
           },
         };
       }

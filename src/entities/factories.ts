@@ -110,8 +110,8 @@ export function createGameStateEntity(): EntityData {
       status: "playing",
       totalItemsSpawned: 0,
       itemsProcessed: 0,
-      durationMs: 60_000,
-      timeRemainingMs: 60_000,
+      durationMs: 30_000,
+      timeRemainingMs: 30_000,
     },
   };
 }
