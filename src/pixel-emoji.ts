@@ -4,7 +4,7 @@
  * Based on technique from https://github.com/chuanqisun/code/blob/master/emoji-to-pixel-art/index.html
  */
 
-const DEFAULT_GRID_SIZE = 16;
+const DEFAULT_GRID_SIZE = 32;
 const DEFAULT_OUTLINE_COLOR = "#ffffff";
 const DEFAULT_SAMPLE_SIZE = 128;
 const ALPHA_THRESHOLD = 128;
@@ -78,11 +78,7 @@ function getCacheKey(emoji: string, size: number, options: PixelArtOptions): str
  * @param options Pixel art rendering options
  * @returns A canvas containing the pixel art
  */
-export function emojiToPixelArt(
-  emoji: string,
-  size: number,
-  options: PixelArtOptions = {}
-): HTMLCanvasElement {
+export function emojiToPixelArt(emoji: string, size: number, options: PixelArtOptions = {}): HTMLCanvasElement {
   // Input validation: return empty canvas for invalid input
   if (!emoji || typeof emoji !== "string" || emoji.length === 0) {
     const emptyCanvas = document.createElement("canvas");
@@ -166,12 +162,7 @@ export function emojiToPixelArt(
         if (!isOpaque(x, y)) {
           // Check neighbors (4-directional)
           if (isOpaque(x + 1, y) || isOpaque(x - 1, y) || isOpaque(x, y + 1) || isOpaque(x, y - 1)) {
-            outputCtx.fillRect(
-              Math.floor(x * pixelScale),
-              Math.floor(y * pixelScale),
-              Math.ceil(pixelScale),
-              Math.ceil(pixelScale)
-            );
+            outputCtx.fillRect(Math.floor(x * pixelScale), Math.floor(y * pixelScale), Math.ceil(pixelScale), Math.ceil(pixelScale));
           }
         }
       }
@@ -184,12 +175,7 @@ export function emojiToPixelArt(
       const p = finalGrid[y][x];
       if (p) {
         outputCtx.fillStyle = `rgb(${p.r},${p.g},${p.b})`;
-        outputCtx.fillRect(
-          Math.floor(x * pixelScale),
-          Math.floor(y * pixelScale),
-          Math.ceil(pixelScale),
-          Math.ceil(pixelScale)
-        );
+        outputCtx.fillRect(Math.floor(x * pixelScale), Math.floor(y * pixelScale), Math.ceil(pixelScale), Math.ceil(pixelScale));
       }
     }
   }
@@ -202,11 +188,7 @@ export function emojiToPixelArt(
  * Create a pixel grid from high-resolution emoji pixel data.
  * Uses sRGB luminance coefficients (0.299, 0.587, 0.114) for feature detection.
  */
-function createPixelGrid(
-  pixels: Uint8ClampedArray,
-  sampleSize: number,
-  gridSize: number
-): PixelGrid {
+function createPixelGrid(pixels: Uint8ClampedArray, sampleSize: number, gridSize: number): PixelGrid {
   const blockSize = sampleSize / gridSize;
   const grid: PixelGrid = [];
 
