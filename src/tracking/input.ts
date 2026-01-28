@@ -154,6 +154,15 @@ export function getObjectEvents(
 /**
  * Find the best global assignment of touch combinations to objects.
  * This optimizes for the best overall match rather than greedy per-object matching.
+ * 
+ * When there are multiple objects and multiple sets of touches, we want to ensure
+ * that each object gets matched to the touches that best fit it globally, rather than
+ * having the first object claim the best touches and leaving suboptimal matches for others.
+ * 
+ * @param states - Array of tracked object states to match
+ * @param touches - All available touch points
+ * @param usedTouchIds - Set of touch IDs that are already in use
+ * @returns Array of matched objects with their assigned touch points
  */
 function findGlobalThreePointMatches(
   states: TrackedObjectState[],
@@ -200,7 +209,16 @@ function findGlobalThreePointMatches(
 
 /**
  * Find the best assignment of candidates to states, ensuring no touch is used twice.
- * Uses a simple greedy approach: try all possible assignments and pick the one with lowest total score.
+ * Uses backtracking to explore all possible assignments and select the one with the lowest total score.
+ * 
+ * This is essentially a constrained optimization problem: assign each object to a set of 3 touches
+ * such that no touch is used twice and the sum of match scores is minimized.
+ * 
+ * For 2-3 objects (typical case), this exhaustive search is fast. For more objects,
+ * a more sophisticated algorithm like the Hungarian algorithm could be used.
+ * 
+ * @param stateCandidates - For each state, a list of valid touch combinations sorted by score
+ * @returns The optimal assignment of touches to objects
  */
 function findBestAssignment(
   stateCandidates: Array<{
@@ -330,6 +348,7 @@ function computeObjectUpdates(
 ): ObjectUpdate[] {
   const updates: ObjectUpdate[] = [];
   const usedTouchIds = new Set<number>();
+  const processedStateIds = new Set<string>();
 
   // Check if we should use global matching
   const states = Array.from(objectStates.values());
@@ -351,6 +370,7 @@ function computeObjectUpdates(
       const result = updateObjectStateWithPoints(state, points, touchIds, now);
       if (result) {
         updates.push(result);
+        processedStateIds.add(state.id);
       }
     }
   }
@@ -359,6 +379,11 @@ function computeObjectUpdates(
   const sortedStates = Array.from(objectStates.values()).sort((a, b) => b.confidence - a.confidence);
 
   for (const state of sortedStates) {
+    // Skip states that were already processed by global matching
+    if (processedStateIds.has(state.id)) {
+      continue;
+    }
+
     const result = updateObjectState(state, touches, usedTouchIds, now);
 
     if (result) {
