@@ -84,11 +84,7 @@ export function createPointerEntity(): EntityData {
 /**
  * Create a tool entity.
  */
-export function createToolEntity(
-  id: "tool1" | "tool2",
-  x: number,
-  y: number
-): EntityData {
+export function createToolEntity(id: "tool1" | "tool2", x: number, y: number): EntityData {
   return {
     tool: { id, isColliding: false },
     transform: { x, y, rotation: 0, scale: 1 },
@@ -110,20 +106,20 @@ export function createScoreEntity(initialValue: number = 600): EntityData {
  */
 export function createGameStateEntity(): EntityData {
   return {
-    gameState: { status: "playing", totalItemsSpawned: 0, itemsProcessed: 0 },
+    gameState: {
+      status: "playing",
+      totalItemsSpawned: 0,
+      itemsProcessed: 0,
+      durationMs: 60_000,
+      timeRemainingMs: 60_000,
+    },
   };
 }
 
 /**
  * Create an item entity that spawns on the conveyor.
  */
-export function createItemEntity(
-  x: number,
-  y: number,
-  emoji: string,
-  name: string,
-  velocityY: number = 250
-): EntityData {
+export function createItemEntity(x: number, y: number, emoji: string, name: string, velocityY: number = 250): EntityData {
   return {
     transform: { x, y, rotation: (Math.random() - 0.5) * 0.5, scale: 1 },
     velocity: { x: 0, y: velocityY },

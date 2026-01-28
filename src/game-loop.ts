@@ -16,6 +16,7 @@ import { drawWorld } from "./render";
 
 export interface GameLoopCallbacks {
   onScoreUpdate: (score: number) => void;
+  onTimeUpdate: (timeRemainingMs: number, durationMs: number) => void;
   onGameEnd: (status: "won" | "lost", score: number, itemsProcessed: number) => void;
 }
 
@@ -27,12 +28,7 @@ export class GameLoop {
   private systems: System<GameEntity, GameGlobal>[];
   private callbacks: GameLoopCallbacks;
 
-  constructor(
-    world: World<GameEntity, GameGlobal>,
-    ctx: CanvasRenderingContext2D,
-    systems: System<GameEntity, GameGlobal>[],
-    callbacks: GameLoopCallbacks
-  ) {
+  constructor(world: World<GameEntity, GameGlobal>, ctx: CanvasRenderingContext2D, systems: System<GameEntity, GameGlobal>[], callbacks: GameLoopCallbacks) {
     this.world = world;
     this.ctx = ctx;
     this.systems = systems;
@@ -88,10 +84,16 @@ export class GameLoop {
     // Run game systems if still playing
     if (currentStatus === "playing") {
       this.world.runSystems(deltaTime, this.systems).next();
-      
+
       // Update score display
       const scoreEntity = this.world.entities.find((e) => e.score);
       this.callbacks.onScoreUpdate(scoreEntity?.score?.value ?? 0);
+
+      // Update timer display
+      const updatedGameState = this.world.entities.find((e) => e.gameState)?.gameState;
+      if (updatedGameState) {
+        this.callbacks.onTimeUpdate(updatedGameState.timeRemainingMs, updatedGameState.durationMs);
+      }
     }
 
     // Always render the world

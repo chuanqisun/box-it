@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { World } from "../engine";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { GameEntity, GameGlobal } from "../domain";
+import { World } from "../engine";
 import { itemStateSystem } from "./item-state";
 
 function createTestWorld(): World<GameEntity, GameGlobal> {
@@ -114,7 +114,13 @@ describe("itemStateSystem", () => {
     it("should increment itemsProcessed in gameState when item removed", () => {
       world
         .addEntity({
-          gameState: { status: "playing", totalItemsSpawned: 5, itemsProcessed: 2 },
+          gameState: {
+            status: "playing",
+            totalItemsSpawned: 5,
+            itemsProcessed: 2,
+            durationMs: 60_000,
+            timeRemainingMs: 60_000,
+          },
         })
         .addEntity({
           transform: { x: 100, y: 750, rotation: 0, scale: 1 },

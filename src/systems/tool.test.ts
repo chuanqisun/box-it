@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { World } from "../engine";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { GameEntity, GameGlobal } from "../domain";
+import { World } from "../engine";
 import { toolSystem } from "./tool";
 
 function createTestWorld(): World<GameEntity, GameGlobal> {
@@ -19,7 +19,15 @@ describe("toolSystem", () => {
     world
       .addEntity({ feedback: { effects: [] } })
       .addEntity({ score: { value: 1000, packedCount: 0 } })
-      .addEntity({ gameState: { status: "playing", totalItemsSpawned: 5, itemsProcessed: 0 } });
+      .addEntity({
+        gameState: {
+          status: "playing",
+          totalItemsSpawned: 5,
+          itemsProcessed: 0,
+          durationMs: 60_000,
+          timeRemainingMs: 60_000,
+        },
+      });
   });
 
   describe("tool1 (container)", () => {

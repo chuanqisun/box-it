@@ -242,6 +242,14 @@ canvas {
   text-shadow: 2px 2px 0px #000;
 }
 
+#timer-display {
+  font-size: 26px;
+  font-weight: 700;
+  color: #4dd0e1;
+  text-shadow: 1px 1px 0px #000;
+  margin-bottom: 6px;
+}
+
 .label {
   font-size: 12px;
   text-transform: uppercase;

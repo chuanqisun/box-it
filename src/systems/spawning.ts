@@ -6,12 +6,18 @@ import type { System } from "../engine";
 
 const ITEM_SPEED_BELT = 250;
 const ITEM_SIZE = 45;
+const GAME_DURATION_MS = 60_000;
+const TARGET_ITEMS = 60;
+const BASE_SPAWN_INTERVAL = GAME_DURATION_MS / TARGET_ITEMS;
 
 const isLive = new URLSearchParams(window.location.search).get("live") === "true";
 const { createItemStream$, simulateInteractions$ } = isLive ? liveAI : mockAI;
 let generationStarted = false;
 
 export const spawningSystem: System<GameEntity, GameGlobal> = (world, deltaTime) => {
+  const gameStateEntity = world.entities.find((e) => e.gameState);
+  if (gameStateEntity?.gameState?.status !== "playing") return world;
+
   const spawnerEntity = world.entities.find((e) => e.spawner);
   const spawner = spawnerEntity?.spawner;
   if (!spawner) return world;
@@ -19,7 +25,7 @@ export const spawningSystem: System<GameEntity, GameGlobal> = (world, deltaTime)
   if (!generationStarted) {
     generationStarted = true;
 
-    const items$ = createItemStream$({ theme: "Black Friday Sale", count: 30 }).pipe(take(60), share());
+    const items$ = createItemStream$({ theme: "Black Friday Sale", count: TARGET_ITEMS }).pipe(take(TARGET_ITEMS), share());
 
     items$.subscribe({
       next: (item) => {
@@ -91,7 +97,14 @@ export const spawningSystem: System<GameEntity, GameGlobal> = (world, deltaTime)
     world.updateEntities((entities) =>
       entities.map((e) => {
         if (e.conveyor && e.spawner) {
-          return { ...e, spawner: { ...e.spawner, timer: 0, interval: Math.random() * 800 + 600 } };
+          return {
+            ...e,
+            spawner: {
+              ...e.spawner,
+              timer: 0,
+              interval: BASE_SPAWN_INTERVAL + (Math.random() - 0.5) * 400,
+            },
+          };
         }
         if (e.gameState) {
           return { ...e, gameState: { ...e.gameState, totalItemsSpawned: e.gameState.totalItemsSpawned + 1 } };
