@@ -91,6 +91,33 @@ describe("toolSystem", () => {
       const score = world.entities.find((e) => e.score)?.score?.value;
       expect(score).toBe(1000);
     });
+
+    it("should not apply container tool to items that are already containers", () => {
+      world
+        .addEntity({
+          tool: { id: "tool1", isColliding: false },
+          transform: { x: 100, y: 100, rotation: 0, scale: 1 },
+          collision: { width: 80, height: 80, type: "circle", radius: 40 },
+        })
+        .addEntity({
+          transform: { x: 120, y: 120, rotation: 0, scale: 1 },
+          collision: { width: 45, height: 45, type: "rectangle" },
+          render: { emoji: "📦" },
+          name: { value: "📦" },
+          itemState: { state: "belt", fallScale: 1 },
+          physical: { size: 45 },
+        });
+
+      toolSystem(world, 16);
+
+      // Item should remain as box
+      const item = world.entities.find((e) => e.itemState && !e.boxAnchor);
+      expect(item?.render?.emoji).toBe("📦");
+      expect(item?.name?.value).toBe("📦");
+      // Score should not change
+      const score = world.entities.find((e) => e.score)?.score?.value;
+      expect(score).toBe(1000);
+    });
   });
 
   describe("tool2 (flat iron)", () => {
