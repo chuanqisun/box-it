@@ -13,8 +13,8 @@ function getDefaultSignature(id: string): ObjectSignature | null {
     boundingBox: {
       width: preset.width,
       height: preset.height,
-      xOffset: 0,
-      yOffset: 0,
+      xOffset: preset.xOffset,
+      yOffset: preset.yOffset,
       orientationOffset: (preset.orientationDegrees * Math.PI) / 180,
     },
   };
@@ -31,11 +31,11 @@ export async function loadCalibratedObjects(container: HTMLElement) {
         const sidesStr = signature.sides.map((s: number) => Math.round(s)).join(", ");
         let info = `[${sidesStr}]`;
 
-        // Show bounding box info if available
+        // Show bounding box info if available (condensed format with all parameters)
         if (signature.boundingBox) {
-          const { width, height, orientationOffset } = signature.boundingBox;
+          const { width, height, xOffset, yOffset, orientationOffset } = signature.boundingBox;
           const orientDeg = Math.round((orientationOffset * 180) / Math.PI);
-          info += ` | Box: ${width}×${height} @ ${orientDeg}°`;
+          info += ` ${width}×${height} @${orientDeg}° xy(${xOffset},${yOffset})`;
         }
 
         item.innerHTML = `<span class="object-id">${id}</span><span class="object-sides">${info}</span>`;

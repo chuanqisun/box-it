@@ -40,10 +40,19 @@ export const CALIBRATION_OBJECT_IDS = ["box", "tool1", "tool2"];
  * These are used when there is no calibration data and at the beginning of calibration.
  * Sides are the lengths of the 3 sides of the touch triangle in ascending order.
  */
-export const DEFAULT_CALIBRATION_PRESETS: Record<string, { sides: [number, number, number]; width: number; height: number; orientationDegrees: number }> = {
-  box: { sides: [230, 384, 450], width: 400, height: 300, orientationDegrees: 32 },
-  tool1: { sides: [85, 181, 209], width: 270, height: 130, orientationDegrees: 171 },
-  tool2: { sides: [100, 150, 200], width: 200, height: 200, orientationDegrees: 0 },
+export interface CalibrationPreset {
+  sides: [number, number, number];
+  width: number;
+  height: number;
+  orientationDegrees: number;
+  xOffset: number;
+  yOffset: number;
+}
+
+export const DEFAULT_CALIBRATION_PRESETS: Record<string, CalibrationPreset> = {
+  box: { sides: [230, 384, 450], width: 400, height: 280, orientationDegrees: 32, xOffset: -63, yOffset: -39 },
+  tool1: { sides: [85, 181, 209], width: 270, height: 130, orientationDegrees: 171, xOffset: -24, yOffset: 7 },
+  tool2: { sides: [100, 150, 200], width: 200, height: 200, orientationDegrees: 0, xOffset: 0, yOffset: 0 },
 };
 
 /** Get default bounding box config for a specific object */
@@ -53,8 +62,8 @@ function getDefaultBoundingBoxConfig(objectId: string) {
     return {
       width: preset.width,
       height: preset.height,
-      xOffset: 0,
-      yOffset: 0,
+      xOffset: preset.xOffset,
+      yOffset: preset.yOffset,
       orientationDegrees: preset.orientationDegrees,
     };
   }
