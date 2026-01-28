@@ -205,16 +205,19 @@ function generateCombinations(touches: TouchPoint[]): TouchPoint[][] {
 }
 
 /**
- * Calculate the total error between measured sides and expected signature.
- * Lower is better.
+ * Calculate the relative error between measured sides and expected signature.
+ * Returns a value between 0 and 1, where 0 is a perfect match.
+ * This scales proportionally with object size.
  */
-function getSideError(points: TouchPoint[], signature: [number, number, number]): number {
+function getRelativeError(points: TouchPoint[], signature: [number, number, number]): number {
   const sides = calculateSortedSides(points);
-  return Math.abs(sides[0] - signature[0]) + Math.abs(sides[1] - signature[1]) + Math.abs(sides[2] - signature[2]);
+  const totalError = Math.abs(sides[0] - signature[0]) + Math.abs(sides[1] - signature[1]) + Math.abs(sides[2] - signature[2]);
+  const signatureSum = signature[0] + signature[1] + signature[2];
+  return totalError / signatureSum;
 }
 
-/** Maximum allowed total error across all 3 sides (in pixels) */
-const MAX_TOTAL_ERROR_PX = 45;
+/** Maximum allowed relative error (as a fraction of total signature length) */
+const MAX_RELATIVE_ERROR = 0.15; // 15% tolerance
 
 /**
  * Find the best non-overlapping matches between combinations and objects.
@@ -235,8 +238,8 @@ function findBestMatches(
 
   for (const [stateId, state] of objectStates) {
     for (const combo of combinations) {
-      const error = getSideError(combo, state.signature);
-      if (error <= MAX_TOTAL_ERROR_PX) {
+      const error = getRelativeError(combo, state.signature);
+      if (error <= MAX_RELATIVE_ERROR) {
         candidates.push({
           stateId,
           points: combo,
