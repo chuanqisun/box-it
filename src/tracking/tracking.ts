@@ -7,6 +7,7 @@ const OBJECT_DISPLAY_NAMES: Record<string, string> = {
   box: "box",
   tool1: "tape",
   tool2: "iron",
+  tool3: "mover",
 };
 
 function getObjectDisplayName(id: string): string {
@@ -118,7 +119,7 @@ export async function initObjectTracking(
 ) {
   try {
     const signatures = await Promise.all(
-      ["box", "tool1", "tool2"].map(async (id) => ({
+      ["box", "tool1", "tool2", "tool3"].map(async (id) => ({
         id,
         signature: await get<ObjectSignature>(`object-signature-${id}`),
       }))

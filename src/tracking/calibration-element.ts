@@ -33,12 +33,13 @@ interface TouchPoint {
   y: number;
 }
 
-export const CALIBRATION_OBJECT_IDS = ["box", "tool1", "tool2"];
+export const CALIBRATION_OBJECT_IDS = ["box", "tool1", "tool2", "tool3"];
 
 const OBJECT_DISPLAY_NAMES: Record<string, string> = {
   box: "box",
   tool1: "tape",
   tool2: "iron",
+  tool3: "mover",
 };
 
 /** Get display name for an object ID */
@@ -64,6 +65,7 @@ export const DEFAULT_CALIBRATION_PRESETS: Record<string, CalibrationPreset> = {
   box: { sides: [230, 384, 450], width: 400, height: 280, orientationDegrees: 32, xOffset: -63, yOffset: -39 },
   tool1: { sides: [85, 181, 209], width: 270, height: 130, orientationDegrees: 171, xOffset: -24, yOffset: 7 },
   tool2: { sides: [100, 150, 200], width: 200, height: 200, orientationDegrees: 0, xOffset: 0, yOffset: 0 },
+  tool3: { sides: [80, 120, 160], width: 150, height: 150, orientationDegrees: 0, xOffset: 0, yOffset: 0 },
 };
 
 /** Get default bounding box config for a specific object */

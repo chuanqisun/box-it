@@ -261,6 +261,7 @@ function checkToolItemCollision(
  * Tool system that handles interactions between tools and items.
  * - Tool 1 (container): Wraps items into box emoji 📦 with fixed cost
  * - Tool 2 (flat iron): Transforms items using ironToolTransforms table
+ * - Tool 3 (mover): Binds to the first touched item and moves it to the tool position
  */
 export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) => {
   const tools = world.entities.filter((e) => e.tool && e.transform && e.collision);
@@ -287,6 +288,10 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
 
   // Track which items have already been processed this frame to avoid double-processing
   const processedItems = new Set<number>();
+
+  // Track mover tool bindings and position updates
+  const moverUpdates: Map<number, { movingItemId: number | null }> = new Map();
+  const itemPositionUpdates: Map<number, { x: number; y: number }> = new Map();
 
   for (const tool of tools) {
     if (!tool.tool || !tool.transform || !tool.collision) continue;
@@ -371,6 +376,54 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
           }
         }
       }
+      // Note: tool3 (mover) is handled separately below the collision loop
+    }
+  }
+
+  // Handle mover tool (tool3) - moves items to tool position
+  for (const tool of tools) {
+    if (!tool.tool || tool.tool.id !== "tool3" || !tool.transform || !tool.collision) continue;
+
+    const toolRadius = tool.collision.radius ?? tool.collision.width / 2;
+    const toolCenterX = tool.transform.x + toolRadius;
+    const toolCenterY = tool.transform.y + toolRadius;
+
+    // If the mover tool already has a bound item, move it
+    if (tool.tool.movingItemId != null) {
+      const boundItem = items.find((item) => item.id === tool.tool!.movingItemId);
+      if (boundItem && boundItem.transform) {
+        // Update item position to follow the tool center
+        itemPositionUpdates.set(boundItem.id, { x: toolCenterX, y: toolCenterY });
+      } else {
+        // Item no longer exists, clear the binding
+        moverUpdates.set(tool.id, { movingItemId: null });
+      }
+    } else if (tool.tool.isTouching) {
+      // Mover is touching but not bound to any item yet - find first colliding item
+      for (const item of items) {
+        if (!item.transform || !item.collision) continue;
+
+        const itemWidth = item.physical?.size ?? item.collision.width;
+        const itemHeight = item.physical?.size ?? item.collision.height;
+
+        const isColliding = checkToolItemCollision(
+          tool.transform.x,
+          tool.transform.y,
+          toolRadius,
+          item.transform.x,
+          item.transform.y,
+          itemWidth,
+          itemHeight
+        );
+
+        if (isColliding) {
+          // Bind to this item
+          moverUpdates.set(tool.id, { movingItemId: item.id });
+          // Also update position immediately
+          itemPositionUpdates.set(item.id, { x: toolCenterX, y: toolCenterY });
+          break; // Only bind to the first item
+        }
+      }
     }
   }
 
@@ -384,6 +437,45 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
             ...e,
             render: { ...e.render!, emoji: transformation.emoji },
             name: { value: transformation.name },
+          };
+        }
+        return e;
+      })
+    );
+  }
+
+  // Apply mover tool item position updates
+  if (itemPositionUpdates.size > 0) {
+    world.updateEntities((entities) =>
+      entities.map((e) => {
+        const positionUpdate = itemPositionUpdates.get(e.id);
+        if (positionUpdate && e.transform) {
+          return {
+            ...e,
+            transform: {
+              ...e.transform,
+              x: positionUpdate.x,
+              y: positionUpdate.y,
+            },
+          };
+        }
+        return e;
+      })
+    );
+  }
+
+  // Apply mover tool binding updates
+  if (moverUpdates.size > 0) {
+    world.updateEntities((entities) =>
+      entities.map((e) => {
+        const moverUpdate = moverUpdates.get(e.id);
+        if (moverUpdate && e.tool) {
+          return {
+            ...e,
+            tool: {
+              ...e.tool,
+              movingItemId: moverUpdate.movingItemId,
+            },
           };
         }
         return e;
