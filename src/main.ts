@@ -201,7 +201,7 @@ function startGame(): void {
 // Event Listeners
 // ============================================================================
 
-startMenu.showModal();
+startMenu.show();
 
 startGameBtn.addEventListener("click", () => {
   startMenu.close();
