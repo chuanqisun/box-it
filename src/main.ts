@@ -19,6 +19,7 @@ import { initBackgroundMusic, preloadSounds, startBackgroundMusic } from "./audi
 import { createResizeObserver$ } from "./engine";
 import { createGameWorld, resetGameWorld } from "./game-init";
 import { GameLoop } from "./game-loop";
+import { getHighScores, isHighScore, saveHighScore, type HighScoreEntry } from "./high-scores";
 import { InputHandler } from "./input-handler";
 import "./style.css";
 
@@ -52,6 +53,10 @@ const endGameMessage = document.getElementById("endGameMessage")!;
 const finalScoreEl = document.getElementById("finalScore")!;
 const itemsProcessedEl = document.getElementById("itemsProcessed")!;
 const restartGameBtn = document.getElementById("restartGame") as HTMLButtonElement;
+const highScoresList = document.getElementById("highScoresList")!;
+const nameInputSection = document.getElementById("nameInputSection")!;
+const playerNameInput = document.getElementById("playerNameInput") as HTMLInputElement;
+const saveHighScoreBtn = document.getElementById("saveHighScore") as HTMLButtonElement;
 
 // ============================================================================
 // Initialization
@@ -119,7 +124,38 @@ const gameLoop = new GameLoop(world, ctx, systems, {
 // UI Functions
 // ============================================================================
 
-function showEndGameScreen(status: "won" | "lost", score: number, itemsProcessed: number): void {
+// Store current score for saving high score
+let currentGameScore = 0;
+
+function renderHighScoresList(highScores: HighScoreEntry[], currentScore?: number): void {
+  if (highScores.length === 0) {
+    highScoresList.innerHTML = '<div class="high-scores-empty">No high scores yet!</div>';
+    return;
+  }
+
+  highScoresList.innerHTML = highScores
+    .map((entry, index) => {
+      const isCurrentScore = currentScore !== undefined && entry.score === currentScore;
+      return `
+        <div class="high-score-entry ${isCurrentScore ? "current-score" : ""}">
+          <span class="high-score-rank">#${index + 1}</span>
+          <span class="high-score-name">${escapeHtml(entry.name)}</span>
+          <span class="high-score-value">$${entry.score}</span>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function escapeHtml(text: string): string {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+async function showEndGameScreen(status: "won" | "lost", score: number, itemsProcessed: number): Promise<void> {
+  currentGameScore = score;
+
   endGameMenu.classList.remove("won", "lost");
   endGameMenu.classList.add(status);
 
@@ -133,6 +169,22 @@ function showEndGameScreen(status: "won" | "lost", score: number, itemsProcessed
 
   finalScoreEl.textContent = `$${score}`;
   itemsProcessedEl.textContent = String(itemsProcessed);
+
+  // Load and display high scores
+  const highScores = await getHighScores();
+  renderHighScoresList(highScores);
+
+  // Check if this is a new high score
+  const qualifiesForHighScore = await isHighScore(score);
+  if (qualifiesForHighScore) {
+    nameInputSection.classList.remove("hidden");
+    playerNameInput.value = "";
+    saveHighScoreBtn.disabled = false;
+    playerNameInput.focus();
+  } else {
+    nameInputSection.classList.add("hidden");
+  }
+
   endGameMenu.showModal();
 }
 
@@ -162,6 +214,33 @@ startGameBtn.addEventListener("click", () => {
 restartGameBtn.addEventListener("click", () => {
   endGameMenu.close();
   startGame();
+});
+
+// High score save handler
+let isSavingHighScore = false;
+
+async function handleSaveHighScore(): Promise<void> {
+  if (isSavingHighScore) return;
+  isSavingHighScore = true;
+  saveHighScoreBtn.disabled = true;
+
+  try {
+    const name = playerNameInput.value.trim();
+    const updatedScores = await saveHighScore(name, currentGameScore);
+    renderHighScoresList(updatedScores, currentGameScore);
+    nameInputSection.classList.add("hidden");
+  } finally {
+    isSavingHighScore = false;
+  }
+}
+
+saveHighScoreBtn.addEventListener("click", handleSaveHighScore);
+
+// Allow Enter key to submit high score
+playerNameInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    handleSaveHighScore();
+  }
 });
 
 // Handle window resize
