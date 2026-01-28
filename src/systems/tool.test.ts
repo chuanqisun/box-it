@@ -34,7 +34,7 @@ describe("toolSystem", () => {
     it("should transform item to box emoji when colliding with tool1", () => {
       world
         .addEntity({
-          tool: { id: "tool1", isColliding: false },
+          tool: { id: "tool1", isColliding: false, isTouching: true },
           transform: { x: 100, y: 100, rotation: 0, scale: 1 },
           collision: { width: 80, height: 80, type: "circle", radius: 40 },
         })
@@ -57,7 +57,7 @@ describe("toolSystem", () => {
     it("should deduct 100 score when using tool1", () => {
       world
         .addEntity({
-          tool: { id: "tool1", isColliding: false },
+          tool: { id: "tool1", isColliding: false, isTouching: true },
           transform: { x: 100, y: 100, rotation: 0, scale: 1 },
           collision: { width: 80, height: 80, type: "circle", radius: 40 },
         })
@@ -79,7 +79,7 @@ describe("toolSystem", () => {
     it("should not interact when not colliding", () => {
       world
         .addEntity({
-          tool: { id: "tool1", isColliding: false },
+          tool: { id: "tool1", isColliding: false, isTouching: true },
           transform: { x: 100, y: 100, rotation: 0, scale: 1 },
           collision: { width: 80, height: 80, type: "circle", radius: 40 },
         })
@@ -103,7 +103,7 @@ describe("toolSystem", () => {
     it("should not apply container tool to items that are already containers", () => {
       world
         .addEntity({
-          tool: { id: "tool1", isColliding: false },
+          tool: { id: "tool1", isColliding: false, isTouching: true },
           transform: { x: 100, y: 100, rotation: 0, scale: 1 },
           collision: { width: 80, height: 80, type: "circle", radius: 40 },
         })
@@ -132,7 +132,7 @@ describe("toolSystem", () => {
     it("should transform clothing item with positive score", () => {
       world
         .addEntity({
-          tool: { id: "tool2", isColliding: false },
+          tool: { id: "tool2", isColliding: false, isTouching: true },
           transform: { x: 100, y: 100, rotation: 0, scale: 1 },
           collision: { width: 80, height: 80, type: "circle", radius: 40 },
         })
@@ -156,7 +156,7 @@ describe("toolSystem", () => {
     it("should destroy items marked as destroyed and increment itemsProcessed", () => {
       world
         .addEntity({
-          tool: { id: "tool2", isColliding: false },
+          tool: { id: "tool2", isColliding: false, isTouching: true },
           transform: { x: 100, y: 100, rotation: 0, scale: 1 },
           collision: { width: 80, height: 80, type: "circle", radius: 40 },
         })
@@ -187,7 +187,7 @@ describe("toolSystem", () => {
     it("should handle negative score transformations", () => {
       world
         .addEntity({
-          tool: { id: "tool2", isColliding: false },
+          tool: { id: "tool2", isColliding: false, isTouching: true },
           transform: { x: 100, y: 100, rotation: 0, scale: 1 },
           collision: { width: 80, height: 80, type: "circle", radius: 40 },
         })
@@ -211,7 +211,7 @@ describe("toolSystem", () => {
     it("should not transform items not in the lookup table", () => {
       world
         .addEntity({
-          tool: { id: "tool2", isColliding: false },
+          tool: { id: "tool2", isColliding: false, isTouching: true },
           transform: { x: 100, y: 100, rotation: 0, scale: 1 },
           collision: { width: 80, height: 80, type: "circle", radius: 40 },
         })
@@ -237,7 +237,7 @@ describe("toolSystem", () => {
     it("should set tool isColliding to true when colliding", () => {
       world
         .addEntity({
-          tool: { id: "tool1", isColliding: false },
+          tool: { id: "tool1", isColliding: false, isTouching: true },
           transform: { x: 100, y: 100, rotation: 0, scale: 1 },
           collision: { width: 80, height: 80, type: "circle", radius: 40 },
         })
@@ -259,7 +259,7 @@ describe("toolSystem", () => {
     it("should set tool isColliding to false when not colliding", () => {
       world
         .addEntity({
-          tool: { id: "tool1", isColliding: true },
+          tool: { id: "tool1", isColliding: true, isTouching: true },
           transform: { x: 100, y: 100, rotation: 0, scale: 1 },
           collision: { width: 80, height: 80, type: "circle", radius: 40 },
         })
@@ -281,7 +281,7 @@ describe("toolSystem", () => {
     it("should not interact with packed items", () => {
       world
         .addEntity({
-          tool: { id: "tool1", isColliding: false },
+          tool: { id: "tool1", isColliding: false, isTouching: true },
           transform: { x: 100, y: 100, rotation: 0, scale: 1 },
           collision: { width: 80, height: 80, type: "circle", radius: 40 },
         })
@@ -308,7 +308,7 @@ describe("toolSystem", () => {
     it("should add feedback effect when tool interacts with item", () => {
       world
         .addEntity({
-          tool: { id: "tool1", isColliding: false },
+          tool: { id: "tool1", isColliding: false, isTouching: true },
           transform: { x: 100, y: 100, rotation: 0, scale: 1 },
           collision: { width: 80, height: 80, type: "circle", radius: 40 },
         })
@@ -326,6 +326,109 @@ describe("toolSystem", () => {
       const feedback = world.entities.find((e) => e.feedback)?.feedback;
       expect(feedback?.effects.length).toBe(1);
       expect(feedback?.effects[0].text).toContain("📦");
+    });
+  });
+
+  describe("tool3 (mover)", () => {
+    it("should bind to first colliding item when touching", () => {
+      world
+        .addEntity({
+          tool: { id: "tool3", isColliding: false, isTouching: true, movingItemId: null },
+          transform: { x: 100, y: 100, rotation: 0, scale: 1 },
+          collision: { width: 80, height: 80, type: "circle", radius: 40 },
+        })
+        .addEntity({
+          transform: { x: 120, y: 120, rotation: 0, scale: 1 },
+          collision: { width: 45, height: 45, type: "rectangle" },
+          render: { emoji: "🍎" },
+          name: { value: "apple" },
+          itemState: { state: "belt", fallScale: 1 },
+          physical: { size: 45 },
+        });
+
+      toolSystem(world, 16);
+
+      const tool = world.entities.find((e) => e.tool?.id === "tool3");
+      const item = world.entities.find((e) => e.itemState && !e.boxAnchor);
+      expect(tool?.tool?.movingItemId).toBe(item?.id);
+    });
+
+    it("should move bound item to tool position", () => {
+      const itemId = 99;
+      world
+        .addEntity({
+          tool: { id: "tool3", isColliding: false, isTouching: true, movingItemId: itemId },
+          transform: { x: 200, y: 200, rotation: 0, scale: 1 },
+          collision: { width: 80, height: 80, type: "circle", radius: 40 },
+        });
+      // Manually add item with specific ID
+      world.updateEntities((entities) => [
+        ...entities,
+        {
+          id: itemId,
+          transform: { x: 100, y: 100, rotation: 0, scale: 1 },
+          collision: { width: 45, height: 45, type: "rectangle" },
+          render: { emoji: "🍎" },
+          name: { value: "apple" },
+          itemState: { state: "belt", fallScale: 1 },
+          physical: { size: 45 },
+        },
+      ]);
+
+      toolSystem(world, 16);
+
+      const item = world.entities.find((e) => e.id === itemId);
+      // Tool center is at 200 + 40 = 240
+      expect(item?.transform?.x).toBe(240);
+      expect(item?.transform?.y).toBe(240);
+    });
+
+    it("should not bind to item when not touching", () => {
+      world
+        .addEntity({
+          tool: { id: "tool3", isColliding: false, isTouching: false, movingItemId: null },
+          transform: { x: 100, y: 100, rotation: 0, scale: 1 },
+          collision: { width: 80, height: 80, type: "circle", radius: 40 },
+        })
+        .addEntity({
+          transform: { x: 120, y: 120, rotation: 0, scale: 1 },
+          collision: { width: 45, height: 45, type: "rectangle" },
+          render: { emoji: "🍎" },
+          name: { value: "apple" },
+          itemState: { state: "belt", fallScale: 1 },
+          physical: { size: 45 },
+        });
+
+      toolSystem(world, 16);
+
+      const tool = world.entities.find((e) => e.tool?.id === "tool3");
+      expect(tool?.tool?.movingItemId).toBeNull();
+    });
+
+    it("should not transform or add score for mover tool", () => {
+      world
+        .addEntity({
+          tool: { id: "tool3", isColliding: false, isTouching: true, movingItemId: null },
+          transform: { x: 100, y: 100, rotation: 0, scale: 1 },
+          collision: { width: 80, height: 80, type: "circle", radius: 40 },
+        })
+        .addEntity({
+          transform: { x: 120, y: 120, rotation: 0, scale: 1 },
+          collision: { width: 45, height: 45, type: "rectangle" },
+          render: { emoji: "🍎" },
+          name: { value: "apple" },
+          itemState: { state: "belt", fallScale: 1 },
+          physical: { size: 45 },
+        });
+
+      toolSystem(world, 16);
+
+      // Item should remain unchanged (not transformed)
+      const item = world.entities.find((e) => e.itemState && !e.boxAnchor);
+      expect(item?.render?.emoji).toBe("🍎");
+      // Score should remain unchanged
+      const score = world.entities.find((e) => e.score)?.score?.value;
+      expect(score).toBe(1000);
     });
   });
 });

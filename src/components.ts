@@ -144,8 +144,12 @@ export interface WithFeedback {
 
 export interface WithTool {
   tool: {
-    id: "tool1" | "tool2";
+    id: "tool1" | "tool2" | "tool3";
     isColliding: boolean;
+    /** Whether this tool is currently actively touching the screen */
+    isTouching: boolean;
+    /** For mover tool: ID of the item being moved, null if not moving any item */
+    movingItemId?: number | null;
   };
 }
 

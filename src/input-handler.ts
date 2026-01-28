@@ -65,8 +65,16 @@ export class InputHandler {
    */
   private setupObjectTracking(): void {
     initObjectTracking(this.canvas, (id, x, y, rotation, confidence, activePoints, boundingBox) => {
-      // Only process updates with reasonable confidence
-      if (confidence < 0.3 || activePoints === 0) return;
+      // Check if this is a release event (no active points)
+      const isTouching = confidence >= 0.3 && activePoints > 0;
+
+      // Update touch state for tools regardless of confidence
+      if (id === "tool1" || id === "tool2" || id === "tool3") {
+        this.updateToolTouchState(id, isTouching);
+      }
+
+      // Only process position updates with reasonable confidence
+      if (!isTouching) return;
 
       // Calculate effective rotation including the orientation offset from calibration
       const orientationOffset = boundingBox?.orientationOffset ?? 0;
@@ -95,7 +103,7 @@ export class InputHandler {
         this.handlePointerInput(adjustedX, adjustedY, effectiveRotation);
         this.startConveyor();
       }
-      if (id === "tool1" || id === "tool2") {
+      if (id === "tool1" || id === "tool2" || id === "tool3") {
         this.updateToolState(id, adjustedX, adjustedY, effectiveRotation);
       }
     });
@@ -149,9 +157,40 @@ export class InputHandler {
   }
 
   /**
+   * Update a tool's touch state (whether it's actively touching the screen).
+   */
+  private updateToolTouchState(toolId: "tool1" | "tool2" | "tool3", isTouching: boolean): void {
+    this.world
+      .updateEntities((entities) =>
+        entities.map((e) => {
+          if (!e.tool || e.tool.id !== toolId) return e;
+          // If tool is being released, also clear movingItemId for mover tool
+          if (!isTouching && e.tool.id === "tool3") {
+            return {
+              ...e,
+              tool: {
+                ...e.tool,
+                isTouching,
+                movingItemId: null,
+              },
+            };
+          }
+          return {
+            ...e,
+            tool: {
+              ...e.tool,
+              isTouching,
+            },
+          };
+        })
+      )
+      .next();
+  }
+
+  /**
    * Update a tool's position and rotation.
    */
-  private updateToolState(toolId: "tool1" | "tool2", x: number, y: number, rotation: number): void {
+  private updateToolState(toolId: "tool1" | "tool2" | "tool3", x: number, y: number, rotation: number): void {
     this.world
       .updateEntities((entities) =>
         entities.map((e) => {
