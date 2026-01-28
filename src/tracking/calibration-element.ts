@@ -35,6 +35,42 @@ interface TouchPoint {
 
 export const CALIBRATION_OBJECT_IDS = ["box", "tool1", "tool2"];
 
+/**
+ * Default calibration presets for each object.
+ * These are used when there is no calibration data and at the beginning of calibration.
+ * Sides are the lengths of the 3 sides of the touch triangle in ascending order.
+ */
+export interface CalibrationPreset {
+  sides: [number, number, number];
+  width: number;
+  height: number;
+  orientationDegrees: number;
+  xOffset: number;
+  yOffset: number;
+}
+
+export const DEFAULT_CALIBRATION_PRESETS: Record<string, CalibrationPreset> = {
+  box: { sides: [230, 384, 450], width: 400, height: 280, orientationDegrees: 32, xOffset: -63, yOffset: -39 },
+  tool1: { sides: [85, 181, 209], width: 270, height: 130, orientationDegrees: 171, xOffset: -24, yOffset: 7 },
+  tool2: { sides: [100, 150, 200], width: 200, height: 200, orientationDegrees: 0, xOffset: 0, yOffset: 0 },
+};
+
+/** Get default bounding box config for a specific object */
+function getDefaultBoundingBoxConfig(objectId: string) {
+  const preset = DEFAULT_CALIBRATION_PRESETS[objectId];
+  if (preset) {
+    return {
+      width: preset.width,
+      height: preset.height,
+      xOffset: preset.xOffset,
+      yOffset: preset.yOffset,
+      orientationDegrees: preset.orientationDegrees,
+    };
+  }
+  // Fallback defaults
+  return { width: 180, height: 130, xOffset: 0, yOffset: 0, orientationDegrees: 0 };
+}
+
 export class CalibrationElement extends HTMLElement {
   static define() {
     if (customElements.get("calibration-element")) return;
@@ -55,14 +91,8 @@ export class CalibrationElement extends HTMLElement {
   private calibrationPhase: "preview" | "touch" | "boundingBox" = "preview";
   /** Temporary storage for current object's touch signature before bounding box configuration */
   private currentSignature: ObjectSignature | null = null;
-  /** Current bounding box values being configured */
-  private boundingBoxConfig = { 
-    width: 180, 
-    height: 130, 
-    xOffset: 0, 
-    yOffset: 0, 
-    orientationDegrees: 0 
-  };
+  /** Current bounding box values being configured - initialized with first object defaults */
+  private boundingBoxConfig = getDefaultBoundingBoxConfig(CALIBRATION_OBJECT_IDS[0]);
 
   connectedCallback() {
     this.#clearPreviousResults();
@@ -245,16 +275,10 @@ export class CalibrationElement extends HTMLElement {
     // Clean up previous subscription to avoid memory leaks
     this.subscription?.unsubscribe();
 
-    // Reset bounding box config for the next object
-    this.boundingBoxConfig = { 
-      width: 180, 
-      height: 130, 
-      xOffset: 0, 
-      yOffset: 0, 
-      orientationDegrees: 0 
-    };
-
     if (this.currentObjectIndex < this.objectIds.length) {
+      // Reset bounding box config with object-specific defaults for the next object
+      const nextObjectId = this.objectIds[this.currentObjectIndex];
+      this.boundingBoxConfig = getDefaultBoundingBoxConfig(nextObjectId);
       // Start with preview phase for all objects
       this.calibrationPhase = "preview";
       this.#render();
