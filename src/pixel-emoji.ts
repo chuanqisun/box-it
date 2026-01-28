@@ -10,6 +10,20 @@ const DEFAULT_SAMPLE_SIZE = 128;
 const ALPHA_THRESHOLD = 128;
 const COVERAGE_THRESHOLD = 0.25;
 
+// Font scaling and positioning constants
+/** Scale factor for emoji font size relative to sample size (0.9 = 90% to prevent clipping) */
+const EMOJI_FONT_SCALE_FACTOR = 0.9;
+/** Vertical offset as fraction of sample size (compensates for emoji baseline positioning) */
+const EMOJI_VERTICAL_OFFSET = 0.05;
+
+// Color quantization and feature detection constants
+/** Divisor for color quantization when grouping similar colors (lower = more groups) */
+const COLOR_QUANTIZATION_STEP = 10;
+/** Minimum proportion of pixels a secondary color must have to be considered for feature preservation */
+const SECONDARY_COLOR_THRESHOLD = 0.15;
+/** Minimum luminance difference between primary and secondary color to prefer darker features (e.g., eyes) */
+const FEATURE_LUMINANCE_THRESHOLD = 40;
+
 interface PixelArtOptions {
   /** Grid resolution (e.g., 16 for 16x16 pixels). Default: 16 */
   gridSize?: number;
@@ -37,6 +51,8 @@ let processCtx: CanvasRenderingContext2D | null = null;
 function getProcessingContext(): CanvasRenderingContext2D {
   if (!processCanvas || !processCtx) {
     processCanvas = document.createElement("canvas");
+    // willReadFrequently hint optimizes the canvas for repeated getImageData() calls
+    // which is essential for our pixel sampling operations during emoji conversion
     processCtx = processCanvas.getContext("2d", { willReadFrequently: true });
   }
   if (!processCtx) {
@@ -67,6 +83,14 @@ export function emojiToPixelArt(
   size: number,
   options: PixelArtOptions = {}
 ): HTMLCanvasElement {
+  // Input validation: return empty canvas for invalid input
+  if (!emoji || typeof emoji !== "string" || emoji.length === 0) {
+    const emptyCanvas = document.createElement("canvas");
+    emptyCanvas.width = size;
+    emptyCanvas.height = size;
+    return emptyCanvas;
+  }
+
   const cacheKey = getCacheKey(emoji, size, options);
   const cached = pixelArtCache.get(cacheKey);
   if (cached) {
@@ -86,10 +110,10 @@ export function emojiToPixelArt(
   // Render the emoji at high resolution
   processCtx.clearRect(0, 0, sampleSize, sampleSize);
   processCtx.filter = "none";
-  processCtx.font = `${sampleSize * 0.9}px "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif`;
+  processCtx.font = `${sampleSize * EMOJI_FONT_SCALE_FACTOR}px "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif`;
   processCtx.textAlign = "center";
   processCtx.textBaseline = "middle";
-  processCtx.fillText(emoji, sampleSize / 2, sampleSize / 2 + sampleSize * 0.05);
+  processCtx.fillText(emoji, sampleSize / 2, sampleSize / 2 + sampleSize * EMOJI_VERTICAL_OFFSET);
 
   const pixelsOriginal = processCtx.getImageData(0, 0, sampleSize, sampleSize).data;
 
@@ -175,7 +199,8 @@ export function emojiToPixelArt(
 }
 
 /**
- * Create a pixel grid from high-resolution emoji pixel data
+ * Create a pixel grid from high-resolution emoji pixel data.
+ * Uses sRGB luminance coefficients (0.299, 0.587, 0.114) for feature detection.
  */
 function createPixelGrid(
   pixels: Uint8ClampedArray,
@@ -209,8 +234,11 @@ function createPixelGrid(
             const g = pixels[i + 1];
             const b = pixels[i + 2];
 
-            // Quantize colors for grouping
-            const key = `${Math.round(r / 10) * 10},${Math.round(g / 10) * 10},${Math.round(b / 10) * 10}`;
+            // Quantize colors for grouping similar colors together
+            const qr = Math.round(r / COLOR_QUANTIZATION_STEP) * COLOR_QUANTIZATION_STEP;
+            const qg = Math.round(g / COLOR_QUANTIZATION_STEP) * COLOR_QUANTIZATION_STEP;
+            const qb = Math.round(b / COLOR_QUANTIZATION_STEP) * COLOR_QUANTIZATION_STEP;
+            const key = `${qr},${qg},${qb}`;
 
             if (!colorCounts[key]) {
               colorCounts[key] = { count: 0, sumR: 0, sumG: 0, sumB: 0 };
@@ -224,7 +252,7 @@ function createPixelGrid(
         }
       }
 
-      // Check if this cell has enough coverage
+      // Check if this cell has enough coverage (strictly greater than threshold)
       if (opaqueCount < totalPixels * COVERAGE_THRESHOLD) {
         grid[y][x] = null;
         continue;
@@ -241,12 +269,13 @@ function createPixelGrid(
           const second = candidates[1];
           const first = candidates[0];
 
-          if (second.count > totalPixels * 0.15) {
+          if (second.count > totalPixels * SECONDARY_COLOR_THRESHOLD) {
+            // Calculate luminance using standard sRGB coefficients
             const lum1 = 0.299 * (first.sumR / first.count) + 0.587 * (first.sumG / first.count) + 0.114 * (first.sumB / first.count);
             const lum2 = 0.299 * (second.sumR / second.count) + 0.587 * (second.sumG / second.count) + 0.114 * (second.sumB / second.count);
 
-            // If second is significantly darker (e.g., eye on face), pick it
-            if (lum1 - lum2 > 40) {
+            // If second color is significantly darker (e.g., eye on face), pick it
+            if (lum1 - lum2 > FEATURE_LUMINANCE_THRESHOLD) {
               grid[y][x] = {
                 r: Math.round(second.sumR / second.count),
                 g: Math.round(second.sumG / second.count),
