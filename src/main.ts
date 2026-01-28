@@ -31,6 +31,7 @@ import { itemStateSystem } from "./systems/item-state";
 import { movementSystem } from "./systems/movement";
 import { resizeSystem } from "./systems/resize";
 import { spawningSystem } from "./systems/spawning";
+import { toolSystem } from "./systems/tool";
 import { zoneSystem } from "./systems/zone";
 import { initCalibrationLifecycle } from "./tracking/tracking";
 
@@ -75,10 +76,11 @@ inputHandler.init();
  * 2. Spawning new entities
  * 3. Movement and physics
  * 4. State changes (item state, box packing)
- * 5. Interactions
- * 6. Zone actions
- * 7. Visual feedback
- * 8. Game state evaluation
+ * 5. Tool interactions
+ * 6. Interactions
+ * 7. Zone actions
+ * 8. Visual feedback
+ * 9. Game state evaluation
  */
 const systems = [
   inputSystem,
@@ -86,6 +88,7 @@ const systems = [
   movementSystem,
   itemStateSystem,
   boxPackingSystem,
+  toolSystem,
   interactionSystem,
   zoneSystem,
   feedbackSystem,
