@@ -35,6 +35,17 @@ interface TouchPoint {
 
 export const CALIBRATION_OBJECT_IDS = ["box", "tool1", "tool2"];
 
+const OBJECT_DISPLAY_NAMES: Record<string, string> = {
+  box: "box",
+  tool1: "tape",
+  tool2: "iron",
+};
+
+/** Get display name for an object ID */
+function getObjectDisplayName(objectId: string): string {
+  return OBJECT_DISPLAY_NAMES[objectId] || objectId;
+}
+
 /**
  * Default calibration presets for each object.
  * These are used when there is no calibration data and at the beginning of calibration.
@@ -536,19 +547,20 @@ export class CalibrationElement extends HTMLElement {
     ctx.font = "bold 16px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(toolId.toUpperCase(), boxCenterX, boxCenterY);
+    ctx.fillText(getObjectDisplayName(toolId).toUpperCase(), boxCenterX, boxCenterY);
 
     ctx.restore();
   }
 
   #render() {
     const currentObjectId = this.objectIds[this.currentObjectIndex];
+    const currentObjectDisplayName = getObjectDisplayName(currentObjectId);
     const isPreviewPhase = this.calibrationPhase === "preview";
 
     render(
       html`
         <div class="calibration-header">
-          <h2>${isPreviewPhase ? `Preview and adjust ${currentObjectId}` : `Place the ${currentObjectId} in the area`}</h2>
+          <h2>${isPreviewPhase ? `Preview and adjust ${currentObjectDisplayName}` : `Place the ${currentObjectDisplayName} in the area`}</h2>
           <button class="close-button" @click=${() => this.dispatchEvent(new CustomEvent("calibration-cancel"))}>✕</button>
         </div>
         <canvas></canvas>
@@ -556,7 +568,7 @@ export class CalibrationElement extends HTMLElement {
           ? html`
               <div class="preview-controls" @touchstart=${(e: Event) => e.stopPropagation()} @touchmove=${(e: Event) => e.stopPropagation()} @touchend=${(e: Event) => e.stopPropagation()}>
                 <div class="preview-instructions">
-                  Move the ${currentObjectId} around to see the preview. The red crosshair shows the rotation center. Adjust dimensions, offset, and rotation below.
+                  Move the ${currentObjectDisplayName} around to see the preview. The red crosshair shows the rotation center. Adjust dimensions, offset, and rotation below.
                 </div>
                 <div class="preview-fields-row">
                   <div class="preview-field">
@@ -645,6 +657,7 @@ export class CalibrationElement extends HTMLElement {
   /** Render the bounding box configuration UI */
   #renderBoundingBoxConfig() {
     const objectId = this.currentSignature?.id ?? "object";
+    const objectDisplayName = getObjectDisplayName(objectId);
     const sidesInfo = this.currentSignature?.sides
       ? `Triangle sides: ${this.currentSignature.sides.map((s) => Math.round(s)).join(", ")} px`
       : "";
@@ -652,7 +665,7 @@ export class CalibrationElement extends HTMLElement {
     render(
       html`
         <div class="calibration-header">
-          <h2>Configure bounding box for ${objectId}</h2>
+          <h2>Configure bounding box for ${objectDisplayName}</h2>
           <button class="close-button" @click=${() => this.dispatchEvent(new CustomEvent("calibration-cancel"))}>✕</button>
         </div>
         <div class="bounding-box-config">

@@ -3,6 +3,16 @@ import { CALIBRATION_OBJECT_IDS, CalibrationElement, DEFAULT_CALIBRATION_PRESETS
 import "./calibration-element.css";
 import { getInputRawEvent$, getObjectEvents, type ObjectUpdate } from "./input";
 
+const OBJECT_DISPLAY_NAMES: Record<string, string> = {
+  box: "box",
+  tool1: "tape",
+  tool2: "iron",
+};
+
+function getObjectDisplayName(id: string): string {
+  return OBJECT_DISPLAY_NAMES[id] || id;
+}
+
 /** Get default signature for an object when no calibration data exists */
 function getDefaultSignature(id: string): ObjectSignature | null {
   const preset = DEFAULT_CALIBRATION_PRESETS[id];
@@ -24,6 +34,7 @@ export async function loadCalibratedObjects(container: HTMLElement) {
   const items = await Promise.all(
     CALIBRATION_OBJECT_IDS.map(async (id) => {
       const signature = await get<ObjectSignature>(`object-signature-${id}`);
+      const displayName = getObjectDisplayName(id);
       const item = document.createElement("div");
       item.className = "calibrated-object-item";
 
@@ -38,10 +49,10 @@ export async function loadCalibratedObjects(container: HTMLElement) {
           info += ` ${width}×${height} @${orientDeg}° xy(${xOffset},${yOffset})`;
         }
 
-        item.innerHTML = `<span class="object-id">${id}</span><span class="object-sides">${info}</span>`;
+        item.innerHTML = `<span class="object-id">${displayName}</span><span class="object-sides">${info}</span>`;
         item.classList.add("calibrated");
       } else {
-        item.innerHTML = `<span class="object-id">${id}</span><span class="object-sides">Not calibrated</span>`;
+        item.innerHTML = `<span class="object-id">${displayName}</span><span class="object-sides">Not calibrated</span>`;
         item.classList.add("not-calibrated");
       }
       return item;
