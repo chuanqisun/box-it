@@ -20,6 +20,7 @@ import {
   createGameStateEntity,
   EntityConstants,
 } from "./entities/factories";
+import { resetSpawningSystem } from "./systems/spawning";
 
 export interface GameInitConfig {
   canvas: HTMLCanvasElement;
@@ -61,6 +62,9 @@ export function createGameWorld(config: GameInitConfig): World<GameEntity, GameG
  * Reset the game world to its initial state for a new game.
  */
 export function resetGameWorld(world: World<GameEntity, GameGlobal>): void {
+  // Reset the spawning system's module-level state
+  resetSpawningSystem();
+
   world.updateEntities((entities) =>
     entities.map((e) => {
       if (e.gameState) {

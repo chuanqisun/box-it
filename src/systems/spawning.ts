@@ -11,6 +11,13 @@ const isLive = new URLSearchParams(window.location.search).get("live") === "true
 const { createItemStream$, simulateInteractions$ } = isLive ? liveAI : mockAI;
 let generationStarted = false;
 
+/**
+ * Reset the spawning system state. Call this when resetting the game.
+ */
+export function resetSpawningSystem(): void {
+  generationStarted = false;
+}
+
 export const spawningSystem: System<GameEntity, GameGlobal> = (world, deltaTime) => {
   const spawnerEntity = world.entities.find((e) => e.spawner);
   const spawner = spawnerEntity?.spawner;
@@ -26,6 +33,12 @@ export const spawningSystem: System<GameEntity, GameGlobal> = (world, deltaTime)
         world.updateEntities((entities) => entities.map((e) => (e.spawner ? { ...e, spawner: { ...e.spawner, queue: [...e.spawner.queue, item] } } : e)));
       },
       complete: () => {
+        world.updateEntities((entities) =>
+          entities.map((e) => (e.spawner ? { ...e, spawner: { ...e.spawner, allItemsGenerated: true } } : e))
+        );
+      },
+      error: () => {
+        // On error, mark as complete so the game can still end
         world.updateEntities((entities) =>
           entities.map((e) => (e.spawner ? { ...e, spawner: { ...e.spawner, allItemsGenerated: true } } : e))
         );
