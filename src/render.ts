@@ -6,9 +6,7 @@ const FLOOR_COLOR = "#2a2a2a";
 const CONVEYOR_COLOR = "#1a1a1a";
 const CONVEYOR_BORDER_COLOR = "#f39c12";
 const BOX_COLOR = "#d2b48c";
-const BOX_SHADOW = "#8b5a2b";
-const BOX_SHADOW_OFFSET = 15;
-const BOX_SHADOW_HEIGHT = 20;
+const BOX_INTERIOR_COLOR = "#8b5a2b";
 const ITEM_SIZE = 45;
 
 export function drawWorld(ctx: CanvasRenderingContext2D, world: GameWorld) {
@@ -163,11 +161,6 @@ function drawBox(ctx: CanvasRenderingContext2D, world: GameWorld) {
   const left = -halfWidth;
   const top = -halfHeight;
 
-  ctx.fillStyle = "rgba(0,0,0,0.5)";
-  ctx.beginPath();
-  ctx.ellipse(centerX + BOX_SHADOW_OFFSET, centerY + halfHeight + BOX_SHADOW_OFFSET, halfWidth, BOX_SHADOW_HEIGHT, 0, 0, Math.PI * 2);
-  ctx.fill();
-
   ctx.save();
   ctx.translate(centerX, centerY);
   ctx.rotate(box.transform.rotation);
@@ -175,7 +168,7 @@ function drawBox(ctx: CanvasRenderingContext2D, world: GameWorld) {
   ctx.fillStyle = BOX_COLOR;
   ctx.fillRect(left, top, box.collision.width, box.collision.height);
 
-  ctx.fillStyle = BOX_SHADOW;
+  ctx.fillStyle = BOX_INTERIOR_COLOR;
   ctx.fillRect(left + wall, top + wall, box.collision.width - wall * 2, box.collision.height - wall * 2);
 
   ctx.save();
@@ -193,15 +186,6 @@ function drawBox(ctx: CanvasRenderingContext2D, world: GameWorld) {
       ctx.translate(left + packed.boxAnchor.relX, top + packed.boxAnchor.relY);
       ctx.rotate(packed.transform.rotation);
       ctx.scale(packed.transform.scale, packed.transform.scale);
-
-      if (packed.quality?.isBad) {
-        ctx.shadowColor = "red";
-        ctx.shadowBlur = 15;
-      } else {
-        ctx.shadowColor = "rgba(0,0,0,0.5)";
-        ctx.shadowBlur = 4;
-        ctx.shadowOffsetY = 2;
-      }
 
       // Render as pixel art
       const emoji = packed.render?.emoji ?? "📦";
@@ -221,24 +205,11 @@ function drawBox(ctx: CanvasRenderingContext2D, world: GameWorld) {
   ctx.lineWidth = 4;
   ctx.strokeRect(left, top, box.collision.width, box.collision.height);
 
-  ctx.beginPath();
-  ctx.moveTo(left, top);
-  ctx.lineTo(left + 25, top + 25);
-  ctx.moveTo(left + box.collision.width, top);
-  ctx.lineTo(left + box.collision.width - 25, top + 25);
-  ctx.moveTo(left, top + box.collision.height);
-  ctx.lineTo(left + 25, top + box.collision.height - 25);
-  ctx.moveTo(left + box.collision.width, top + box.collision.height);
-  ctx.lineTo(left + box.collision.width - 25, top + box.collision.height - 25);
-  ctx.stroke();
   ctx.restore();
 }
 
 function drawConveyor(ctx: CanvasRenderingContext2D, world: GameWorld, conveyor: NonNullable<GameEntity["conveyor"]>) {
   const beltX = (world.global.canvas.width - conveyor.width) / 2;
-
-  ctx.fillStyle = "rgba(0,0,0,0.6)";
-  ctx.fillRect(beltX + 20, conveyor.length, conveyor.width - 40, 40);
 
   ctx.fillStyle = CONVEYOR_BORDER_COLOR;
   ctx.fillRect(beltX - 15, -50, conveyor.width + 30, conveyor.length + 50);
@@ -284,20 +255,6 @@ function drawItem(ctx: CanvasRenderingContext2D, item: GameEntity) {
 
   const scale = item.itemState?.state === "falling" ? item.itemState.fallScale : 1;
   ctx.scale(scale, scale);
-
-  let shadowY = 5;
-  let shadowBlur = 5;
-  let shadowAlpha = 0.3;
-
-  if (item.itemState?.state === "falling") {
-    shadowY = 15 + (1 - item.itemState.fallScale) * 50;
-    shadowBlur = 10;
-    shadowAlpha = 0.3 * item.itemState.fallScale;
-  }
-
-  ctx.shadowColor = `rgba(0,0,0,${shadowAlpha})`;
-  ctx.shadowBlur = shadowBlur;
-  ctx.shadowOffsetY = shadowY;
 
   // Render as pixel art
   const emoji = item.render?.emoji ?? "📦";
