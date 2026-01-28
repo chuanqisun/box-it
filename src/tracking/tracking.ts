@@ -1,7 +1,24 @@
 import { get } from "idb-keyval";
-import { CALIBRATION_OBJECT_IDS, CalibrationElement, type ObjectSignature } from "./calibration-element";
+import { CALIBRATION_OBJECT_IDS, CalibrationElement, DEFAULT_CALIBRATION_PRESETS, type ObjectSignature } from "./calibration-element";
 import "./calibration-element.css";
 import { getInputRawEvent$, getObjectEvents, type ObjectUpdate } from "./input";
+
+/** Get default signature for an object when no calibration data exists */
+function getDefaultSignature(id: string): ObjectSignature | null {
+  const preset = DEFAULT_CALIBRATION_PRESETS[id];
+  if (!preset) return null;
+  return {
+    id,
+    sides: preset.sides,
+    boundingBox: {
+      width: preset.width,
+      height: preset.height,
+      xOffset: 0,
+      yOffset: 0,
+      orientationOffset: (preset.orientationDegrees * Math.PI) / 180,
+    },
+  };
+}
 
 export async function loadCalibratedObjects(container: HTMLElement) {
   const items = await Promise.all(
@@ -97,12 +114,17 @@ export async function initObjectTracking(
     );
 
     const knownObjects = signatures
-      .filter((entry) => entry.signature?.sides)
-      .map((entry) => ({
-        id: entry.id,
-        sides: entry.signature!.sides,
-        boundingBox: entry.signature!.boundingBox,
-      }));
+      .map((entry) => {
+        // Use calibrated signature if available, otherwise use default
+        const signature = entry.signature?.sides ? entry.signature : getDefaultSignature(entry.id);
+        if (!signature?.sides) return null;
+        return {
+          id: entry.id,
+          sides: signature.sides,
+          boundingBox: signature.boundingBox,
+        };
+      })
+      .filter((obj): obj is NonNullable<typeof obj> => obj !== null);
 
     if (knownObjects.length === 0) return;
 
