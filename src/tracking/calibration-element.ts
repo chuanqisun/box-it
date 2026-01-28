@@ -1,8 +1,8 @@
 import { del, set } from "idb-keyval";
 import { html, render } from "lit-html";
 import { Subscription, distinctUntilChanged, exhaustMap, filter, finalize, map, share, takeUntil, tap, timer } from "rxjs";
+import { getCanonicalRotation, getCentroid as getGeoCentroid } from "./geometry";
 import { getInputRawEvent$ } from "./input";
-import { getCentroid as getGeoCentroid, getCanonicalRotation } from "./geometry";
 
 /**
  * Extended object signature with bounding box properties.
@@ -61,9 +61,9 @@ export interface CalibrationPreset {
 }
 
 export const DEFAULT_CALIBRATION_PRESETS: Record<string, CalibrationPreset> = {
-  box: { sides: [230, 384, 450], width: 400, height: 280, orientationDegrees: 32, xOffset: -63, yOffset: -39 },
-  tool1: { sides: [85, 181, 209], width: 270, height: 130, orientationDegrees: 171, xOffset: -24, yOffset: 7 },
-  tool2: { sides: [100, 150, 200], width: 200, height: 200, orientationDegrees: 0, xOffset: 0, yOffset: 0 },
+  box: { sides: [237, 385, 450], width: 400, height: 280, orientationDegrees: 32, xOffset: -63, yOffset: -39 },
+  tool1: { sides: [115, 241, 302], width: 210, height: 130, orientationDegrees: -178, xOffset: -110, yOffset: -12 },
+  tool2: { sides: [88, 179, 211], width: 206, height: 172, orientationDegrees: -10, xOffset: 64, yOffset: 0 },
 };
 
 /** Get default bounding box config for a specific object */
@@ -423,10 +423,10 @@ export class CalibrationElement extends HTMLElement {
     const height = Number.isFinite(this.boundingBoxConfig.height) ? this.boundingBoxConfig.height : 130;
     const xOffset = Number.isFinite(this.boundingBoxConfig.xOffset) ? this.boundingBoxConfig.xOffset : 0;
     const yOffset = Number.isFinite(this.boundingBoxConfig.yOffset) ? this.boundingBoxConfig.yOffset : 0;
-    
+
     // Skip drawing if dimensions are invalid
     if (width <= 0 || height <= 0) return;
-    
+
     const halfWidth = width / 2;
     const halfHeight = height / 2;
     const wall = 8;
@@ -451,7 +451,7 @@ export class CalibrationElement extends HTMLElement {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(rotation);
-    
+
     // Now apply offset in local coordinates (after rotation)
     // This means the offset moves the box relative to the rotation center
     const boxCenterX = xOffset;
@@ -501,10 +501,10 @@ export class CalibrationElement extends HTMLElement {
     const height = Number.isFinite(this.boundingBoxConfig.height) ? this.boundingBoxConfig.height : 80;
     const xOffset = Number.isFinite(this.boundingBoxConfig.xOffset) ? this.boundingBoxConfig.xOffset : 0;
     const yOffset = Number.isFinite(this.boundingBoxConfig.yOffset) ? this.boundingBoxConfig.yOffset : 0;
-    
+
     // Skip drawing if dimensions are invalid
     if (width <= 0 || height <= 0) return;
-    
+
     const halfWidth = width / 2;
     const halfHeight = height / 2;
 
@@ -528,7 +528,7 @@ export class CalibrationElement extends HTMLElement {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(rotation);
-    
+
     // Apply offset in local coordinates
     const boxCenterX = xOffset;
     const boxCenterY = yOffset;
@@ -566,9 +566,15 @@ export class CalibrationElement extends HTMLElement {
         <canvas></canvas>
         ${isPreviewPhase
           ? html`
-              <div class="preview-controls" @touchstart=${(e: Event) => e.stopPropagation()} @touchmove=${(e: Event) => e.stopPropagation()} @touchend=${(e: Event) => e.stopPropagation()}>
+              <div
+                class="preview-controls"
+                @touchstart=${(e: Event) => e.stopPropagation()}
+                @touchmove=${(e: Event) => e.stopPropagation()}
+                @touchend=${(e: Event) => e.stopPropagation()}
+              >
                 <div class="preview-instructions">
-                  Move the ${currentObjectDisplayName} around to see the preview. The red crosshair shows the rotation center. Adjust dimensions, offset, and rotation below.
+                  Move the ${currentObjectDisplayName} around to see the preview. The red crosshair shows the rotation center. Adjust dimensions, offset, and
+                  rotation below.
                 </div>
                 <div class="preview-fields-row">
                   <div class="preview-field">
@@ -658,9 +664,7 @@ export class CalibrationElement extends HTMLElement {
   #renderBoundingBoxConfig() {
     const objectId = this.currentSignature?.id ?? "object";
     const objectDisplayName = getObjectDisplayName(objectId);
-    const sidesInfo = this.currentSignature?.sides
-      ? `Triangle sides: ${this.currentSignature.sides.map((s) => Math.round(s)).join(", ")} px`
-      : "";
+    const sidesInfo = this.currentSignature?.sides ? `Triangle sides: ${this.currentSignature.sides.map((s) => Math.round(s)).join(", ")} px` : "";
 
     render(
       html`
@@ -670,19 +674,12 @@ export class CalibrationElement extends HTMLElement {
         </div>
         <div class="bounding-box-config">
           <p class="sides-info">${sidesInfo}</p>
-          <p class="config-description">
-            Set the bounding box dimensions and orientation for the visual representation and collision detection.
-          </p>
+          <p class="config-description">Set the bounding box dimensions and orientation for the visual representation and collision detection.</p>
 
           <div class="bounding-box-preview">
             <svg viewBox="0 0 200 200" class="preview-svg">
               <!-- Triangle representing touch points -->
-              <polygon
-                points="${this.#getTrianglePoints()}"
-                fill="rgba(241, 196, 15, 0.3)"
-                stroke="#f1c40f"
-                stroke-width="2"
-              />
+              <polygon points="${this.#getTrianglePoints()}" fill="rgba(241, 196, 15, 0.3)" stroke="#f1c40f" stroke-width="2" />
               <!-- Bounding box -->
               <g transform="translate(100, 100) rotate(${this.boundingBoxConfig.orientationDegrees})">
                 <rect
