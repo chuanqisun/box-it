@@ -86,7 +86,7 @@ export function initCalibrationLifecycle() {
 
 export async function initObjectTracking(
   canvas: HTMLCanvasElement,
-  onUpdate: (id: string, x: number, y: number, rotation: number, confidence: number, activePoints: number) => void
+  onUpdate: (id: string, x: number, y: number, rotation: number, confidence: number, activePoints: number, boundingBox?: ObjectUpdate["boundingBox"]) => void
 ) {
   try {
     const signatures = await Promise.all(
@@ -110,7 +110,7 @@ export async function initObjectTracking(
     // Pass canvas as target element to ensure consistent coordinate system
     getObjectEvents(rawEvents$, { knownObjects }, canvas).subscribe((update: ObjectUpdate) => {
       if (update.type === "down" || update.type === "move") {
-        onUpdate(update.id, update.position.x, update.position.y, update.rotation, update.confidence, update.activePoints);
+        onUpdate(update.id, update.position.x, update.position.y, update.rotation, update.confidence, update.activePoints, update.boundingBox);
       }
     });
   } catch (error) {

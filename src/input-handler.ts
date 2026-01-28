@@ -21,6 +21,8 @@ export class InputHandler {
   private world: World<GameEntity, GameGlobal>;
   private canvas: HTMLCanvasElement;
   private pointerState: PointerState = { x: 0, y: 0, rotation: 0 };
+  /** Cached box dimensions to avoid unnecessary updates */
+  private cachedBoxDimensions: { width: number; height: number } | null = null;
 
   constructor(world: World<GameEntity, GameGlobal>, canvas: HTMLCanvasElement) {
     this.world = world;
@@ -62,18 +64,73 @@ export class InputHandler {
    * Set up physical object tracking.
    */
   private setupObjectTracking(): void {
-    initObjectTracking(this.canvas, (id, x, y, rotation, confidence, activePoints) => {
+    initObjectTracking(this.canvas, (id, x, y, rotation, confidence, activePoints, boundingBox) => {
       // Only process updates with reasonable confidence
       if (confidence < 0.3 || activePoints === 0) return;
 
+      // Calculate effective rotation including the orientation offset from calibration
+      const orientationOffset = boundingBox?.orientationOffset ?? 0;
+      const effectiveRotation = rotation + orientationOffset;
+
+      // Apply offset from bounding box configuration in local (rotated) coordinates
+      // The offset is defined relative to the object's orientation, so we need to
+      // rotate it by the effective rotation to get the world-space offset
+      const xOffset = boundingBox?.xOffset ?? 0;
+      const yOffset = boundingBox?.yOffset ?? 0;
+      
+      // Rotate offset by effective rotation to convert from local to world coordinates
+      const cos = Math.cos(effectiveRotation);
+      const sin = Math.sin(effectiveRotation);
+      const worldOffsetX = xOffset * cos - yOffset * sin;
+      const worldOffsetY = xOffset * sin + yOffset * cos;
+      
+      const adjustedX = x + worldOffsetX;
+      const adjustedY = y + worldOffsetY;
+
       if (id === "box") {
-        this.handlePointerInput(x, y, rotation);
+        // Update box dimensions if calibrated dimensions are available
+        if (boundingBox?.width && boundingBox?.height) {
+          this.updateBoxDimensions(boundingBox.width, boundingBox.height);
+        }
+        this.handlePointerInput(adjustedX, adjustedY, effectiveRotation);
         this.startConveyor();
       }
       if (id === "tool1" || id === "tool2") {
-        this.updateToolState(id, x, y, rotation);
+        this.updateToolState(id, adjustedX, adjustedY, effectiveRotation);
       }
     });
+  }
+
+  /**
+   * Update the box entity's collision dimensions to match calibrated values.
+   * Uses caching to avoid unnecessary updates on every tracking frame.
+   */
+  private updateBoxDimensions(width: number, height: number): void {
+    // Check cache first to avoid unnecessary entity updates
+    if (this.cachedBoxDimensions?.width === width && this.cachedBoxDimensions?.height === height) {
+      return;
+    }
+    
+    // Update cache
+    this.cachedBoxDimensions = { width, height };
+    
+    this.world
+      .updateEntities((entities) =>
+        entities.map((e) => {
+          if (!e.box || !e.collision) return e;
+          // Only update if dimensions are different
+          if (e.collision.width === width && e.collision.height === height) return e;
+          return {
+            ...e,
+            collision: {
+              ...e.collision,
+              width,
+              height,
+            },
+          };
+        })
+      )
+      .next();
   }
 
   /**

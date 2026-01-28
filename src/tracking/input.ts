@@ -1,4 +1,5 @@
 import { fromEvent, merge, Observable } from "rxjs";
+import { getCanonicalRotation, getCentroid as getGeoCentroid, getDistance, normalizeAngle, calculateSortedSides } from "./geometry";
 
 export function getInputRawEvent$(targetArea: HTMLElement): Observable<TouchEvent> {
   const touchstart$ = fromEvent<TouchEvent>(targetArea, "touchstart");
@@ -24,6 +25,10 @@ export interface KnownObject {
   boundingBox?: {
     width: number;
     height: number;
+    /** X offset from centroid in local coordinates (applied in the rotated coordinate frame) */
+    xOffset: number;
+    /** Y offset from centroid in local coordinates (applied in the rotated coordinate frame) */
+    yOffset: number;
     /** Rotation offset in radians from the longest edge of the triangle */
     orientationOffset: number;
   };
@@ -38,6 +43,14 @@ export interface ObjectUpdate {
   confidence: number;
   /** Number of currently active touch points for this object */
   activePoints: number;
+  /** Bounding box configuration for this object */
+  boundingBox?: {
+    width: number;
+    height: number;
+    xOffset: number;
+    yOffset: number;
+    orientationOffset: number;
+  };
 }
 
 interface TouchPoint {
@@ -70,6 +83,8 @@ interface TrackedObjectState {
   confidence: number;
   isActive: boolean;
   lastUpdateTime: number;
+  /** Bounding box configuration */
+  boundingBox?: KnownObject["boundingBox"];
 }
 
 const SIGNATURE_TOLERANCE_RATIO = 0.35; // avg relative error allowed for side length matching (soft cap)
@@ -97,6 +112,7 @@ export function getObjectEvents(
           velocity: { x: 0, y: 0, rotation: 0 },
           confidence: 0,
           lastUpdateTime: 0,
+          boundingBox: obj.boundingBox,
         },
       ])
     );
@@ -160,6 +176,7 @@ function computeObjectUpdates(
         rotation: state.rotation ?? 0,
         confidence: CONFIDENCE.PRESERVED,
         activePoints: 0,
+        boundingBox: state.boundingBox,
       });
       state.isActive = false;
       state.confidence = CONFIDENCE.PRESERVED;
@@ -216,6 +233,7 @@ function updateObjectState(
       rotation: newRotation,
       confidence: CONFIDENCE.THREE_POINTS,
       activePoints: 3,
+      boundingBox: state.boundingBox,
     };
   }
 
@@ -264,6 +282,7 @@ function updateObjectState(
         rotation: newRotation,
         confidence,
         activePoints: partialMatch.matchedCount,
+        boundingBox: state.boundingBox,
       };
     }
 
@@ -295,6 +314,7 @@ function updateObjectState(
         rotation: predictedRotation,
         confidence: CONFIDENCE.PRESERVED,
         activePoints: 0,
+        boundingBox: state.boundingBox,
       };
     }
   }
@@ -436,7 +456,7 @@ function buildTouchCombinations(touches: TouchPoint[]): TouchPoint[][] {
 }
 
 function getSignatureScore(points: TouchPoint[], signature: [number, number, number]): number {
-  const sides = calculateSides(points);
+  const sides = calculateSortedSides(points);
   const dx = sides[0] - signature[0];
   const dy = sides[1] - signature[1];
   const dz = sides[2] - signature[2];
@@ -445,44 +465,15 @@ function getSignatureScore(points: TouchPoint[], signature: [number, number, num
   return distance / normalization;
 }
 
-function calculateSides(points: TouchPoint[]): [number, number, number] {
-  const d01 = getDistance(points[0], points[1]);
-  const d12 = getDistance(points[1], points[2]);
-  const d20 = getDistance(points[2], points[0]);
-  const sides = [d01, d12, d20].sort((a, b) => a - b);
-  return [sides[0], sides[1], sides[2]];
-}
-
+// Re-export geometry functions for use within this module
+// These are now imported from the geometry module for order-invariant behavior
 function getCentroid(points: TouchPoint[]): { x: number; y: number } {
-  const sum = points.reduce((acc, point) => ({ x: acc.x + point.x, y: acc.y + point.y }), { x: 0, y: 0 });
-  return { x: sum.x / points.length, y: sum.y / points.length };
+  return getGeoCentroid(points);
 }
 
 function getRotation(points: TouchPoint[], previousRotation?: number): number {
-  const distances = [
-    { i: 0, j: 1, dist: getDistance(points[0], points[1]) },
-    { i: 1, j: 2, dist: getDistance(points[1], points[2]) },
-    { i: 2, j: 0, dist: getDistance(points[2], points[0]) },
-  ];
-  distances.sort((a, b) => b.dist - a.dist);
-  const { i, j } = distances[0];
-  const baseAngle = Math.atan2(points[j].y - points[i].y, points[j].x - points[i].x);
-  if (previousRotation === undefined) return baseAngle;
-
-  // Avoid sudden 180° flips by choosing the angle closest to the previous rotation.
-  const flipped = normalizeAngle(baseAngle + Math.PI);
-  const baseDelta = Math.abs(normalizeAngle(baseAngle - previousRotation));
-  const flippedDelta = Math.abs(normalizeAngle(flipped - previousRotation));
-  return flippedDelta < baseDelta ? flipped : baseAngle;
+  return getCanonicalRotation(points, previousRotation);
 }
 
-function getDistance(a: { x: number; y: number }, b: { x: number; y: number }): number {
-  return Math.hypot(a.x - b.x, a.y - b.y);
-}
-
-function normalizeAngle(angle: number): number {
-  // Use modulo arithmetic for efficient normalization without loops
-  const TWO_PI = Math.PI * 2;
-  const normalized = ((angle % TWO_PI) + TWO_PI) % TWO_PI;
-  return normalized > Math.PI ? normalized - TWO_PI : normalized;
-}
+// Note: calculateSides and getDistance are imported from geometry module
+// and used directly via getSignatureScore
