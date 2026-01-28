@@ -2,7 +2,7 @@ import type { GameEntity, GameGlobal } from "../domain";
 import type { System } from "../engine";
 
 /**
- * The box tool (tool1) interacts with everything by turning them in 📦
+ * The box tool (tool1) interacts with everything by turning them into 📦
  * It has a fixed cost of -100 score per use
  */
 const BOX_TOOL_COST = -100;
@@ -270,8 +270,9 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
     (e) => e.itemState && !e.boxAnchor && e.transform && e.collision && e.render
   );
 
-  // Track items to remove and score changes
+  // Track items to remove, transform, and score changes
   const itemsToRemove: number[] = [];
+  const itemTransformations: Map<number, { emoji: string; name: string }> = new Map();
   let totalScoreChange = 0;
   const feedbackEffects: {
     text: string;
@@ -325,18 +326,8 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
           velocityY: -1,
         });
 
-        // Transform the item to a box
-        world.updateEntities((entities) =>
-          entities.map((e) =>
-            e.id === item.id
-              ? {
-                  ...e,
-                  render: { ...e.render!, emoji: "📦" },
-                  name: { value: "📦" },
-                }
-              : e
-          )
-        );
+        // Queue transformation to a box
+        itemTransformations.set(item.id, { emoji: "📦", name: "📦" });
       } else if (tool.tool.id === "tool2") {
         // Tool 2: Flat Iron - transforms items based on the lookup table
         const emoji = item.render.emoji;
@@ -362,22 +353,29 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
             // Item is destroyed - mark for removal
             itemsToRemove.push(item.id);
           } else {
-            // Transform the item
-            world.updateEntities((entities) =>
-              entities.map((e) =>
-                e.id === item.id
-                  ? {
-                      ...e,
-                      render: { ...e.render!, emoji: transform.output },
-                      name: { value: transform.output },
-                    }
-                  : e
-              )
-            );
+            // Queue transformation
+            itemTransformations.set(item.id, { emoji: transform.output, name: transform.output });
           }
         }
       }
     }
+  }
+
+  // Apply all item transformations in a single batch
+  if (itemTransformations.size > 0) {
+    world.updateEntities((entities) =>
+      entities.map((e) => {
+        const transformation = itemTransformations.get(e.id);
+        if (transformation) {
+          return {
+            ...e,
+            render: { ...e.render!, emoji: transformation.emoji },
+            name: { value: transformation.name },
+          };
+        }
+        return e;
+      })
+    );
   }
 
   // Remove destroyed items and update game state
@@ -437,6 +435,10 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
   }
 
   // Update tool collision state for visual feedback
+  // Get fresh items list excluding removed items
+  const removedSet = new Set(itemsToRemove);
+  const currentItems = items.filter((item) => !removedSet.has(item.id));
+
   world.updateEntities((entities) =>
     entities.map((e) => {
       if (!e.tool || !e.transform || !e.collision) return e;
@@ -444,7 +446,7 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
       const toolRadius = e.collision.radius ?? e.collision.width / 2;
       let isCurrentlyColliding = false;
 
-      for (const item of items) {
+      for (const item of currentItems) {
         if (!item.transform || !item.collision) continue;
         const itemWidth = item.physical?.size ?? item.collision.width;
         const itemHeight = item.physical?.size ?? item.collision.height;
