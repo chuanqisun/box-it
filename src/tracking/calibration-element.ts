@@ -65,7 +65,7 @@ export const DEFAULT_CALIBRATION_PRESETS: Record<string, CalibrationPreset> = {
   box: { sides: [237, 385, 450], width: 400, height: 280, orientationDegrees: 32, xOffset: -63, yOffset: -39 },
   tool1: { sides: [115, 241, 302], width: 210, height: 130, orientationDegrees: -178, xOffset: -110, yOffset: -12 },
   tool2: { sides: [88, 179, 211], width: 206, height: 172, orientationDegrees: -10, xOffset: 64, yOffset: 0 },
-  tool3: { sides: [100, 200, 250], width: 180, height: 120, orientationDegrees: 0, xOffset: 0, yOffset: 0 },
+  tool3: { sides: [136, 203, 263], width: 120, height: 120, orientationDegrees: 180, xOffset: -146, yOffset: 33 },
 };
 
 /** Get default bounding box config for a specific object */
