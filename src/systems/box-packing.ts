@@ -2,7 +2,7 @@ import { playSound } from "../audio";
 import type { GameEntity, GameGlobal } from "../domain";
 import type { System } from "../engine";
 
-const ITEM_SIZE = 56;
+const ITEM_SIZE = 64;
 
 export const boxPackingSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) => {
   const box = world.entities.find((entity) => entity.box);
@@ -60,7 +60,7 @@ export const boxPackingSystem: System<GameEntity, GameGlobal> = (world, _deltaTi
         x: box.transform.x + box.collision.width / 2,
         y: box.transform.y,
         color: "#ff4444",
-        size: 36,
+        size: 48,
         life: 1,
         velocityY: -1,
       };
