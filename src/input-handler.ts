@@ -234,6 +234,9 @@ export class InputHandler {
 
   /**
    * Deactivate a tool when touch is released.
+   * Note: For tool3 (mover), the heldItemId is intentionally NOT cleared here.
+   * The mover system handles the release logic when it detects isActive=false,
+   * including proper item state transitions and potential score penalties.
    */
   private deactivateTool(toolId: "tool1" | "tool2" | "tool3"): void {
     this.world

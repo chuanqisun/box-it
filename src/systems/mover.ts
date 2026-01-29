@@ -268,6 +268,10 @@ export const moverSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =
 
           world.updateEntities((entities) =>
             entities.map((e) => {
+              // Remove the held item from entities
+              if (e.id === heldItemId) {
+                return null;
+              }
               if (e.tool?.id === "tool3") {
                 return {
                   ...e,
@@ -306,12 +310,26 @@ export const moverSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =
                 };
               }
               return e;
-            })
+            }).filter((e): e is GameEntity => e !== null)
           );
-
-          // Remove the held item
-          world.removeEntity(heldItemId);
         }
+      } else {
+        // Held item was removed by another system - clear the tool state
+        world.updateEntities((entities) =>
+          entities.map((e) => {
+            if (e.tool?.id === "tool3") {
+              return {
+                ...e,
+                tool: {
+                  ...e.tool,
+                  heldItemId: undefined,
+                  isColliding: false,
+                },
+              };
+            }
+            return e;
+          })
+        );
       }
     }
   }

@@ -38,8 +38,14 @@ export function drawWorld(ctx: CanvasRenderingContext2D, world: GameWorld) {
 
   const items = world.entities.filter((e) => e.itemState && !e.boxAnchor);
 
+  // Draw falling items
   items.forEach((item) => {
     if (item.itemState?.state === "falling") drawItem(ctx, item);
+  });
+
+  // Draw held items (being moved by mover tool) - rendered outside the belt clip region
+  items.forEach((item) => {
+    if (item.itemState?.state === "held") drawItem(ctx, item);
   });
 
   const conveyor = world.entities.find((e) => e.conveyor)?.conveyor;
