@@ -326,15 +326,7 @@ function checkToolItemCollision(
   itemHeight: number
 ): boolean {
   // Get the tool rectangle corners
-  const toolCorners = getRectangleCorners(
-    toolCenterX,
-    toolCenterY,
-    toolWidth,
-    toolHeight,
-    toolRotation,
-    toolXOffset,
-    toolYOffset
-  );
+  const toolCorners = getRectangleCorners(toolCenterX, toolCenterY, toolWidth, toolHeight, toolRotation, toolXOffset, toolYOffset);
 
   // For items, treat them as small axis-aligned rectangles (no rotation)
   const itemHalfWidth = itemWidth / 2;
@@ -378,9 +370,7 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
   if (tools.length === 0) return world;
 
   // Get items that are currently on the belt or falling (not packed)
-  const items = world.entities.filter(
-    (e) => e.itemState && !e.boxAnchor && e.transform && e.collision && e.render
-  );
+  const items = world.entities.filter((e) => e.itemState && !e.boxAnchor && e.transform && e.collision && e.render);
 
   // Track items to remove, transform, and score changes
   const itemsToRemove: number[] = [];
