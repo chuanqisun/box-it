@@ -43,11 +43,6 @@ export function drawWorld(ctx: CanvasRenderingContext2D, world: GameWorld) {
     if (item.itemState?.state === "falling") drawItem(ctx, item);
   });
 
-  // Draw held items (being moved by mover tool) - rendered outside the belt clip region
-  items.forEach((item) => {
-    if (item.itemState?.state === "held") drawItem(ctx, item);
-  });
-
   const conveyor = world.entities.find((e) => e.conveyor)?.conveyor;
   if (conveyor) {
     drawConveyor(ctx, world, conveyor);
@@ -64,6 +59,11 @@ export function drawWorld(ctx: CanvasRenderingContext2D, world: GameWorld) {
   }
 
   drawTools(ctx, world);
+
+  // Draw held items (being moved by mover tool) - rendered on top of everything
+  items.forEach((item) => {
+    if (item.itemState?.state === "held") drawItem(ctx, item);
+  });
 
   world.entities.forEach((entity) => {
     if (entity.feedback) {
@@ -292,8 +292,8 @@ function drawItem(ctx: CanvasRenderingContext2D, item: GameEntity) {
   let scale = 1;
   if (item.itemState?.state === "falling") {
     scale = item.itemState.fallScale;
-  } else if (item.itemState?.state === "held") {
-    scale = 0.8; // 80% size when held by mover tool
+  } else if (item.itemState?.state === "held" && item.itemState.raisedScale) {
+    scale = item.itemState.raisedScale;
   }
   ctx.scale(scale, scale);
 

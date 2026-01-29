@@ -221,6 +221,7 @@ export const moverSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =
                   itemState: {
                     ...e.itemState,
                     state: "held" as const,
+                    raisedScale: 1.2,
                   },
                 };
               }
@@ -282,6 +283,7 @@ export const moverSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =
                   itemState: {
                     ...e.itemState,
                     state: "belt" as const,
+                    raisedScale: undefined,
                   },
                 };
               }

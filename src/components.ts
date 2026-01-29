@@ -92,6 +92,8 @@ export interface WithItemState {
   itemState: {
     state: "belt" | "falling" | "packed" | "held";
     fallScale: number;
+    /** Scale when item is raised/held by mover tool */
+    raisedScale?: number;
   };
 }
 
