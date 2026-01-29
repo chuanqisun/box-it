@@ -292,6 +292,7 @@ canvas {
 
 .calibrated-object-item {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
@@ -299,6 +300,28 @@ canvas {
   border-radius: 8px;
   border: 1px solid #333;
   font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.calibrated-object-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #f1c40f;
+}
+
+.calibrated-object-item:active {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.calibrated-object-item .calibrate-hint {
+  width: 100%;
+  font-size: 11px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.calibrated-object-item:hover .calibrate-hint {
+  color: #f1c40f;
 }
 
 .calibrated-object-item.calibrated {

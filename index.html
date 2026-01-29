@@ -53,9 +53,8 @@
         <div class="settings-divider"></div>
         <div class="settings-section">
           <label>Object Calibration</label>
-          <p class="settings-description">Calibrate physical objects for touch recognition.</p>
+          <p class="settings-description">Click an item below to calibrate it for touch recognition.</p>
           <div id="calibratedObjects" class="calibrated-objects-list"></div>
-          <button id="calibrateButton" class="btn btn-secondary">Start Calibration</button>
         </div>
       </div>
     </dialog>
@@ -81,7 +80,15 @@
           <div id="nameInputSection" class="name-input-section hidden">
             <p id="newHighScoreMessage" class="new-high-score-message">🎉 New High Score!</p>
             <div class="name-input-row">
-              <input id="playerNameInput" type="text" placeholder="Enter your name" maxlength="20" autocomplete="off" aria-label="Enter your name for high score" aria-describedby="newHighScoreMessage" />
+              <input
+                id="playerNameInput"
+                type="text"
+                placeholder="Enter your name"
+                maxlength="20"
+                autocomplete="off"
+                aria-label="Enter your name for high score"
+                aria-describedby="newHighScoreMessage"
+              />
               <button id="saveHighScore" class="btn btn-primary">Save</button>
             </div>
           </div>

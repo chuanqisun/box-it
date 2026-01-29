@@ -90,7 +90,10 @@ export class CalibrationElement extends HTMLElement {
     customElements.define("calibration-element", CalibrationElement);
   }
 
-  private objectIds = CALIBRATION_OBJECT_IDS;
+  /** The specific object ID to calibrate. If not set, defaults to first object. */
+  objectId: string = CALIBRATION_OBJECT_IDS[0];
+
+  private objectIds: string[] = [];
   private currentObjectIndex = 0;
   private canvas: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D | null = null;
@@ -108,8 +111,15 @@ export class CalibrationElement extends HTMLElement {
   private boundingBoxConfig = getDefaultBoundingBoxConfig(CALIBRATION_OBJECT_IDS[0]);
 
   connectedCallback() {
+    // Set up objectIds based on the objectId property (single object calibration)
+    this.objectIds = [this.objectId];
+    this.currentObjectIndex = 0;
+
+    // Initialize bounding box config with the object's defaults
+    this.boundingBoxConfig = getDefaultBoundingBoxConfig(this.objectId);
+
     this.#clearPreviousResults();
-    // Start with preview phase for all objects
+    // Start with preview phase
     this.calibrationPhase = "preview";
     this.#render();
     this.#setupCanvas();
@@ -117,9 +127,8 @@ export class CalibrationElement extends HTMLElement {
   }
 
   async #clearPreviousResults() {
-    for (const id of this.objectIds) {
-      await del(`object-signature-${id}`);
-    }
+    // Only clear the specific object being calibrated
+    await del(`object-signature-${this.objectId}`);
   }
 
   disconnectedCallback() {
@@ -288,18 +297,8 @@ export class CalibrationElement extends HTMLElement {
     // Clean up previous subscription to avoid memory leaks
     this.subscription?.unsubscribe();
 
-    if (this.currentObjectIndex < this.objectIds.length) {
-      // Reset bounding box config with object-specific defaults for the next object
-      const nextObjectId = this.objectIds[this.currentObjectIndex];
-      this.boundingBoxConfig = getDefaultBoundingBoxConfig(nextObjectId);
-      // Start with preview phase for all objects
-      this.calibrationPhase = "preview";
-      this.#render();
-      this.#setupCanvas();
-      this.#setupInput();
-    } else {
-      this.#showComplete();
-    }
+    // Since we're only calibrating one object, always show complete
+    this.#showComplete();
   }
 
   /** Handle changes to bounding box configuration */

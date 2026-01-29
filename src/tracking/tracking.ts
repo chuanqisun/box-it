@@ -31,13 +31,14 @@ function getDefaultSignature(id: string): ObjectSignature | null {
   };
 }
 
-export async function loadCalibratedObjects(container: HTMLElement) {
+export async function loadCalibratedObjects(container: HTMLElement, onCalibrate: (objectId: string) => void) {
   const items = await Promise.all(
     CALIBRATION_OBJECT_IDS.map(async (id) => {
       const signature = await get<ObjectSignature>(`object-signature-${id}`);
       const displayName = getObjectDisplayName(id);
       const item = document.createElement("div");
-      item.className = "calibrated-object-item";
+      item.className = "calibrated-object-item clickable";
+      item.dataset.objectId = id;
 
       if (signature && signature.sides) {
         const sidesStr = signature.sides.map((s: number) => Math.round(s)).join(", ");
@@ -50,12 +51,16 @@ export async function loadCalibratedObjects(container: HTMLElement) {
           info += ` ${width}×${height} @${orientDeg}° xy(${xOffset},${yOffset})`;
         }
 
-        item.innerHTML = `<span class="object-id">${displayName}</span><span class="object-sides">${info}</span>`;
+        item.innerHTML = `<span class="object-id">${displayName}</span><span class="object-sides">${info}</span><span class="calibrate-hint">Click to recalibrate</span>`;
         item.classList.add("calibrated");
       } else {
-        item.innerHTML = `<span class="object-id">${displayName}</span><span class="object-sides">Not calibrated</span>`;
+        item.innerHTML = `<span class="object-id">${displayName}</span><span class="object-sides">Not calibrated</span><span class="calibrate-hint">Click to calibrate</span>`;
         item.classList.add("not-calibrated");
       }
+
+      // Add click handler for individual calibration
+      item.addEventListener("click", () => onCalibrate(id));
+
       return item;
     })
   );
@@ -65,43 +70,33 @@ export async function loadCalibratedObjects(container: HTMLElement) {
 
 export function initCalibrationLifecycle() {
   const settingsMenu = document.getElementById("settingsMenu") as HTMLDialogElement;
-  const calibrateBtn = document.getElementById("calibrateButton") as HTMLButtonElement;
   const calibratedObjectsEl = document.getElementById("calibratedObjects") as HTMLDivElement;
 
-  if (!settingsMenu || !calibrateBtn || !calibratedObjectsEl) {
+  if (!settingsMenu || !calibratedObjectsEl) {
     return;
   }
 
   CalibrationElement.define();
 
-  settingsMenu.addEventListener("toggle", (e) => {
-    if ((e as ToggleEvent).newState === "open") {
-      loadCalibratedObjects(calibratedObjectsEl);
-    }
-  });
-
-  calibrateBtn.addEventListener("click", () => {
+  /** Start calibration for a specific object */
+  const startCalibration = (objectId: string) => {
     settingsMenu.close();
 
-    // Create calibration element with padding
+    // Create calibration element for the specific object
     const calibrationEl = document.createElement("calibration-element") as CalibrationElement;
+    calibrationEl.objectId = objectId;
     calibrationEl.style.padding = "40px";
     document.body.appendChild(calibrationEl);
 
     // Listen for calibration done event
     calibrationEl.addEventListener("calibration-done", async () => {
-      // Retrieve and log the calibrated objects
-      const signatures = await Promise.all(CALIBRATION_OBJECT_IDS.map(async (id) => ({ id, signature: await get(`object-signature-${id}`) })));
-
-      console.log(
-        "Calibrated Objects:",
-        signatures.reduce((acc, { id, signature }) => ({ ...acc, [id]: signature }), {})
-      );
+      const signature = await get(`object-signature-${objectId}`);
+      console.log(`Calibrated ${objectId}:`, signature);
 
       // Remove calibration element and reopen settings menu
       calibrationEl.remove();
       settingsMenu.showModal();
-      loadCalibratedObjects(calibratedObjectsEl);
+      loadCalibratedObjects(calibratedObjectsEl, startCalibration);
     });
 
     // Listen for calibration cancel event
@@ -110,12 +105,27 @@ export function initCalibrationLifecycle() {
       calibrationEl.remove();
       settingsMenu.showModal();
     });
+  };
+
+  settingsMenu.addEventListener("toggle", (e) => {
+    if ((e as ToggleEvent).newState === "open") {
+      loadCalibratedObjects(calibratedObjectsEl, startCalibration);
+    }
   });
 }
 
 export async function initObjectTracking(
   canvas: HTMLCanvasElement,
-  onUpdate: (id: string, x: number, y: number, rotation: number, confidence: number, activePoints: number, boundingBox?: ObjectUpdate["boundingBox"], eventType?: "down" | "move" | "up") => void
+  onUpdate: (
+    id: string,
+    x: number,
+    y: number,
+    rotation: number,
+    confidence: number,
+    activePoints: number,
+    boundingBox?: ObjectUpdate["boundingBox"],
+    eventType?: "down" | "move" | "up"
+  ) => void
 ) {
   try {
     const signatures = await Promise.all(
@@ -128,9 +138,7 @@ export async function initObjectTracking(
     const knownObjects = signatures
       .map((entry) => {
         // Use calibrated signature if available with both sides and boundingBox, otherwise use default
-        const signature = entry.signature?.sides && entry.signature?.boundingBox 
-          ? entry.signature 
-          : getDefaultSignature(entry.id);
+        const signature = entry.signature?.sides && entry.signature?.boundingBox ? entry.signature : getDefaultSignature(entry.id);
         if (!signature?.sides) return null;
         return {
           id: entry.id,
