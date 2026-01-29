@@ -1,6 +1,7 @@
 import { share, take } from "rxjs";
 import * as liveAI from "../ai/generate";
 import * as mockAI from "../ai/generate-mock";
+import { getSelectedTheme } from "../ai/themes";
 import type { GameEntity, GameGlobal } from "../domain";
 import type { System } from "../engine";
 
@@ -14,6 +15,10 @@ const isLive = new URLSearchParams(window.location.search).get("live") === "true
 const { createItemStream$, simulateInteractions$ } = isLive ? liveAI : mockAI;
 let generationStarted = false;
 
+export function resetGenerationState(): void {
+  generationStarted = false;
+}
+
 export const spawningSystem: System<GameEntity, GameGlobal> = (world, deltaTime) => {
   const gameStateEntity = world.entities.find((e) => e.gameState);
   if (gameStateEntity?.gameState?.status !== "playing") return world;
@@ -25,7 +30,8 @@ export const spawningSystem: System<GameEntity, GameGlobal> = (world, deltaTime)
   if (!generationStarted) {
     generationStarted = true;
 
-    const items$ = createItemStream$({ theme: "Black Friday Sale", count: TARGET_ITEMS }).pipe(take(TARGET_ITEMS), share());
+    const currentTheme = getSelectedTheme();
+    const items$ = createItemStream$({ theme: currentTheme, count: TARGET_ITEMS }).pipe(take(TARGET_ITEMS), share());
 
     items$.subscribe({
       next: (item) => {

@@ -523,3 +523,74 @@ canvas {
 .name-input-row .btn {
   flex-shrink: 0;
 }
+
+/* Theme Selection Styles */
+.theme-selection-section {
+  margin-top: 16px;
+}
+
+.theme-selection-section > label {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #888;
+  margin-bottom: 10px;
+}
+
+.theme-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.theme-option {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 8px;
+  border: 1px solid #333;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.theme-option:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #555;
+}
+
+.theme-option input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  margin-right: 10px;
+  accent-color: #f1c40f;
+}
+
+.theme-option:has(input[type="radio"]:checked) {
+  border-color: #f1c40f;
+  background: rgba(241, 196, 15, 0.1);
+}
+
+.theme-label {
+  font-size: 14px;
+  color: #fff;
+}
+
+.custom-theme-input {
+  margin-top: 10px;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid #444;
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.custom-theme-input:focus {
+  border-color: rgba(241, 196, 15, 0.8);
+  box-shadow: 0 0 0 2px rgba(241, 196, 15, 0.2);
+}
