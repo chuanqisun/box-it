@@ -5,10 +5,10 @@ import { getSelectedTheme } from "../ai/themes";
 import type { GameEntity, GameGlobal } from "../domain";
 import type { System } from "../engine";
 
-const ITEM_SPEED_BELT = 250;
+const ITEM_SPEED_BELT = 160;
 const ITEM_SIZE = 80;
-const GAME_DURATION_MS = 30_000;
-const TARGET_ITEMS = 60;
+const GAME_DURATION_MS = 45_000;
+const TARGET_ITEMS = 40;
 const BASE_SPAWN_INTERVAL = GAME_DURATION_MS / TARGET_ITEMS;
 
 const isLive = new URLSearchParams(window.location.search).get("live") === "true";
@@ -112,7 +112,7 @@ export const spawningSystem: System<GameEntity, GameGlobal> = (world, deltaTime)
             spawner: {
               ...e.spawner,
               timer: 0,
-              interval: BASE_SPAWN_INTERVAL + (Math.random() - 0.5) * 400,
+              interval: BASE_SPAWN_INTERVAL + (Math.random() - 0.5) * 1000,
             },
           };
         }

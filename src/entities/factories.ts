@@ -41,7 +41,7 @@ export function createConveyorEntity(canvasHeight: number): EntityData {
     conveyor: {
       isActive: false,
       offset: 0,
-      speed: 250,
+      speed: 160,
       width: 300,
       length: canvasHeight * 0.55,
     },
