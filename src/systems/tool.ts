@@ -370,7 +370,9 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
   if (tools.length === 0) return world;
 
   // Get items that are currently on the belt or falling (not packed or held)
-  const items = world.entities.filter((e) => e.itemState && e.itemState.state !== "packed" && e.itemState.state !== "held" && !e.boxAnchor && e.transform && e.collision && e.render);
+  const items = world.entities.filter(
+    (e) => e.itemState && e.itemState.state !== "packed" && e.itemState.state !== "held" && !e.boxAnchor && e.transform && e.collision && e.render
+  );
 
   // Track items to remove, transform, and score changes
   const itemsToRemove: number[] = [];
@@ -449,6 +451,9 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
         itemTransformations.set(item.id, { emoji: "📦", name: "📦" });
       } else if (tool.tool.id === "tool2") {
         // Tool 2: Flat Iron - transforms items based on the lookup table
+        // Skip items that have already been ironed to prevent multiple score deductions
+        if (item.ironable?.ironed) continue;
+
         const emoji = item.render.emoji;
         const transform = ironToolTransforms.find((t) => t.input === emoji);
 
@@ -478,6 +483,9 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
             // Queue transformation
             itemTransformations.set(item.id, { emoji: transform.output, name: transform.output });
           }
+
+          // Mark item as ironed to prevent multiple score deductions
+          item.ironable = { ironed: true };
         }
       }
     }

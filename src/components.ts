@@ -167,3 +167,10 @@ export interface WithGameState {
     timeRemainingMs: number;
   };
 }
+
+export interface WithIronable {
+  ironable: {
+    /** Whether this item has already been ironed */
+    ironed: boolean;
+  };
+}
