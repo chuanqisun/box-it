@@ -107,6 +107,17 @@ describe("Entity Factories", () => {
       expect(entity.tool!.isColliding).toBe(false);
     });
 
+    it("should not be active initially", () => {
+      const entity = createToolEntity("tool1", 0, 0);
+      expect(entity.tool!.isActive).toBe(false);
+    });
+
+    it("should support tool3 (mover)", () => {
+      const entity = createToolEntity("tool3", 50, 50);
+      expect(entity.tool!.id).toBe("tool3");
+      expect(entity.tool!.isActive).toBe(false);
+    });
+
     it("should have rectangle collision with offset support", () => {
       const entity = createToolEntity("tool1", 0, 0);
       expect(entity.collision!.type).toBe("rectangle");

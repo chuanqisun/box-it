@@ -15,6 +15,11 @@ export const movementSystem: System<GameEntity, GameGlobal> = (world, deltaTime)
         };
       }
 
+      // Don't move items that are being held by the mover tool
+      if (entity.itemState?.state === "held") {
+        return entity;
+      }
+
       if (entity.transform && entity.velocity) {
         return {
           ...entity,

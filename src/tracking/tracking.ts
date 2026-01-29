@@ -7,6 +7,7 @@ const OBJECT_DISPLAY_NAMES: Record<string, string> = {
   box: "box",
   tool1: "tape",
   tool2: "iron",
+  tool3: "mover",
 };
 
 function getObjectDisplayName(id: string): string {
@@ -114,11 +115,11 @@ export function initCalibrationLifecycle() {
 
 export async function initObjectTracking(
   canvas: HTMLCanvasElement,
-  onUpdate: (id: string, x: number, y: number, rotation: number, confidence: number, activePoints: number, boundingBox?: ObjectUpdate["boundingBox"]) => void
+  onUpdate: (id: string, x: number, y: number, rotation: number, confidence: number, activePoints: number, boundingBox?: ObjectUpdate["boundingBox"], eventType?: "down" | "move" | "up") => void
 ) {
   try {
     const signatures = await Promise.all(
-      ["box", "tool1", "tool2"].map(async (id) => ({
+      ["box", "tool1", "tool2", "tool3"].map(async (id) => ({
         id,
         signature: await get<ObjectSignature>(`object-signature-${id}`),
       }))
@@ -144,9 +145,7 @@ export async function initObjectTracking(
     const rawEvents$ = getInputRawEvent$(canvas);
     // Pass canvas as target element to ensure consistent coordinate system
     getObjectEvents(rawEvents$, { knownObjects }, canvas).subscribe((update: ObjectUpdate) => {
-      if (update.type === "down" || update.type === "move") {
-        onUpdate(update.id, update.position.x, update.position.y, update.rotation, update.confidence, update.activePoints, update.boundingBox);
-      }
+      onUpdate(update.id, update.position.x, update.position.y, update.rotation, update.confidence, update.activePoints, update.boundingBox, update.type);
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

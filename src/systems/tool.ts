@@ -4,9 +4,9 @@ import type { System } from "../engine";
 
 /**
  * The box tool (tool1) interacts with everything by turning them into 📦
- * It has a fixed cost of -100 score per use
+ * It has a fixed cost of -50 score per use
  */
-const BOX_TOOL_COST = -100;
+const BOX_TOOL_COST = -50;
 
 /**
  * The flat iron tool (tool2) interacts with the following predefined emojis. It may result in positive or negative score change.
@@ -369,8 +369,8 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
   const tools = world.entities.filter((e) => e.tool && e.transform && e.collision);
   if (tools.length === 0) return world;
 
-  // Get items that are currently on the belt or falling (not packed)
-  const items = world.entities.filter((e) => e.itemState && !e.boxAnchor && e.transform && e.collision && e.render);
+  // Get items that are currently on the belt or falling (not packed or held)
+  const items = world.entities.filter((e) => e.itemState && e.itemState.state !== "packed" && e.itemState.state !== "held" && !e.boxAnchor && e.transform && e.collision && e.render);
 
   // Track items to remove, transform, and score changes
   const itemsToRemove: number[] = [];

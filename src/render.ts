@@ -13,6 +13,7 @@ const OBJECT_DISPLAY_NAMES: Record<string, string> = {
   box: "BOX",
   tool1: "TAPE",
   tool2: "IRON",
+  tool3: "MOVER",
 };
 
 export function drawWorld(ctx: CanvasRenderingContext2D, world: GameWorld) {
@@ -69,6 +70,9 @@ function drawTools(ctx: CanvasRenderingContext2D, world: GameWorld) {
   const tools = world.entities.filter((e) => e.tool && e.transform && e.collision);
   for (const tool of tools) {
     if (!tool.transform || !tool.collision || !tool.tool) continue;
+
+    // Only render tools when they are active (touch is active)
+    if (!tool.tool.isActive) continue;
 
     // Transform position is the rotation center (centroid)
     const centerX = tool.transform.x;

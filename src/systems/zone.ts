@@ -135,33 +135,6 @@ function buyBox(world: GameWorld): void {
   const pointer = world.entities.find((e) => e.pointer)?.pointer;
   if (!scoreEntity?.score || !pointer) return;
 
-  if (scoreEntity.score.value < 200) {
-    const feedback = {
-      text: "INSUFFICIENT FUNDS",
-      x: 150,
-      y: world.global.canvas.height - 200,
-      color: "#ff4444",
-      size: 30,
-      life: 1,
-      velocityY: -1,
-    };
-    world.updateEntities((entities) =>
-      entities.map((e) => {
-        if (e.feedback) {
-          return {
-            ...e,
-            feedback: {
-              ...e.feedback,
-              effects: [...e.feedback.effects, feedback],
-            },
-          };
-        }
-        return e;
-      })
-    );
-    return;
-  }
-
   // Play get box sound
   playSound("getBox");
 
