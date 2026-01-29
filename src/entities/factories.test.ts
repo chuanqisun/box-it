@@ -232,7 +232,7 @@ describe("Entity Factories", () => {
       expect(EntityConstants.BOX_HEIGHT).toBe(130);
       expect(EntityConstants.ZONE_SIZE).toBe(200);
       expect(EntityConstants.TOOL_SIZE).toBe(80);
-      expect(EntityConstants.ITEM_SIZE).toBe(45);
+      expect(EntityConstants.ITEM_SIZE).toBe(56);
     });
   });
 });

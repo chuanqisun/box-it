@@ -11,7 +11,7 @@ const BOX_WIDTH = 180;
 const BOX_HEIGHT = 130;
 const ZONE_SIZE = 200;
 const TOOL_SIZE = 80;
-const ITEM_SIZE = 45;
+const ITEM_SIZE = 56;
 
 type EntityData = Omit<GameEntity, "id">;
 

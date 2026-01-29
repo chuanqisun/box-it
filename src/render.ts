@@ -7,7 +7,7 @@ const CONVEYOR_COLOR = "#1a1a1a";
 const CONVEYOR_BORDER_COLOR = "#f39c12";
 const BOX_COLOR = "#d2b48c";
 const BOX_INTERIOR_COLOR = "#8b5a2b";
-const ITEM_SIZE = 45;
+const ITEM_SIZE = 56;
 
 const OBJECT_DISPLAY_NAMES: Record<string, string> = {
   box: "BOX",
@@ -209,7 +209,7 @@ function drawBox(ctx: CanvasRenderingContext2D, world: GameWorld) {
   ctx.rect(left + wall, top + wall, box.collision.width - wall * 2, box.collision.height - wall * 2);
   ctx.clip();
 
-  const PACKED_ITEM_SIZE = 30;
+  const PACKED_ITEM_SIZE = 50;
 
   world.entities
     .filter((e) => e.boxAnchor)
