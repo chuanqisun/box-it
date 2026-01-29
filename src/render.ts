@@ -80,6 +80,9 @@ function drawTools(ctx: CanvasRenderingContext2D, world: GameWorld) {
     // Only render tools when they are active (touch is active)
     if (!tool.tool.isActive) continue;
 
+    // Don't render target rectangle for mover tool when it has an item attached
+    if (tool.tool.id === "tool3" && tool.tool.heldItemId !== undefined) continue;
+
     // Transform position is the rotation center (centroid)
     const centerX = tool.transform.x;
     const centerY = tool.transform.y;
@@ -286,7 +289,12 @@ function drawItem(ctx: CanvasRenderingContext2D, item: GameEntity) {
   ctx.translate(item.transform.x, item.transform.y);
   ctx.rotate(item.transform.rotation);
 
-  const scale = item.itemState?.state === "falling" ? item.itemState.fallScale : 1;
+  let scale = 1;
+  if (item.itemState?.state === "falling") {
+    scale = item.itemState.fallScale;
+  } else if (item.itemState?.state === "held") {
+    scale = 0.8; // 80% size when held by mover tool
+  }
   ctx.scale(scale, scale);
 
   // Render as pixel art
