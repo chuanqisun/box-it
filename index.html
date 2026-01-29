@@ -31,6 +31,28 @@
       </div>
       <div class="dialog-body">
         <p>Ready to start your shift at the fulfillment center?</p>
+        <fieldset class="theme-selection-section">
+          <legend>Select a Theme</legend>
+          <div class="theme-options" role="radiogroup" aria-label="Theme selection">
+            <label class="theme-option">
+              <input type="radio" name="theme" value="Black Friday Sale" checked />
+              <span class="theme-label">🛒 Black Friday Sale</span>
+            </label>
+            <label class="theme-option">
+              <input type="radio" name="theme" value="Disaster Relief Donation" />
+              <span class="theme-label">🆘 Disaster Relief Donation</span>
+            </label>
+            <label class="theme-option">
+              <input type="radio" name="theme" value="Back to School" />
+              <span class="theme-label">📚 Back to School</span>
+            </label>
+            <label class="theme-option">
+              <input type="radio" name="theme" value="custom" id="customThemeRadio" />
+              <span class="theme-label">✏️ Custom Theme</span>
+            </label>
+          </div>
+          <input type="text" id="customThemeInput" class="custom-theme-input hidden" placeholder="Enter your custom theme..." maxlength="50" aria-label="Custom theme name" />
+        </fieldset>
       </div>
       <div class="dialog-footer">
         <button id="startGame" class="btn btn-primary">Start Game</button>

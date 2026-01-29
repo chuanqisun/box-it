@@ -15,6 +15,7 @@
  */
 
 import { initSettings } from "./ai/settings";
+import { setSelectedTheme, PREDEFINED_THEMES } from "./ai/themes";
 import { initBackgroundMusic, preloadSounds, startBackgroundMusic } from "./audio";
 import { createResizeObserver$ } from "./engine";
 import { createGameWorld, resetGameWorld } from "./game-init";
@@ -33,7 +34,7 @@ import { itemStateSystem } from "./systems/item-state";
 import { movementSystem } from "./systems/movement";
 import { moverSystem } from "./systems/mover";
 import { resizeSystem } from "./systems/resize";
-import { spawningSystem } from "./systems/spawning";
+import { spawningSystem, resetGenerationState } from "./systems/spawning";
 import { toolSystem } from "./systems/tool";
 import { zoneSystem } from "./systems/zone";
 import { initCalibrationLifecycle } from "./tracking/tracking";
@@ -58,6 +59,9 @@ const highScoresList = document.getElementById("highScoresList")!;
 const nameInputSection = document.getElementById("nameInputSection")!;
 const playerNameInput = document.getElementById("playerNameInput") as HTMLInputElement;
 const saveHighScoreBtn = document.getElementById("saveHighScore") as HTMLButtonElement;
+const customThemeRadio = document.getElementById("customThemeRadio") as HTMLInputElement;
+const customThemeInput = document.getElementById("customThemeInput") as HTMLInputElement;
+const themeRadios = document.querySelectorAll<HTMLInputElement>('input[name="theme"]');
 
 // ============================================================================
 // Initialization
@@ -206,17 +210,51 @@ function startGame(): void {
 
 startMenu.show();
 
-startGameBtn.addEventListener("click", () => {
+// Handle theme radio button changes
+themeRadios.forEach((radio) => {
+  radio.addEventListener("change", () => {
+    if (customThemeRadio.checked) {
+      customThemeInput.classList.remove("hidden");
+      customThemeInput.focus();
+    } else {
+      customThemeInput.classList.add("hidden");
+    }
+  });
+});
+
+function readThemeFromUI(): string {
+  const selectedRadio = document.querySelector<HTMLInputElement>('input[name="theme"]:checked');
+  if (selectedRadio?.value === "custom") {
+    return customThemeInput.value.trim() || PREDEFINED_THEMES[0].label;
+  }
+  return selectedRadio?.value || PREDEFINED_THEMES[0].label;
+}
+
+function handleStartGame(): void {
+  const selectedTheme = readThemeFromUI();
+  setSelectedTheme(selectedTheme);
   startMenu.close();
   // Preload sounds on first user interaction (browser autoplay policy)
   preloadSounds();
   startBackgroundMusic();
   startGame();
+}
+
+startGameBtn.addEventListener("click", handleStartGame);
+
+// Allow Enter key to start game from custom theme input
+customThemeInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    handleStartGame();
+  }
 });
 
 restartGameBtn.addEventListener("click", () => {
   endGameMenu.close();
-  startGame();
+  // Reset generation state so new theme can be used
+  resetGenerationState();
+  // Show theme selection menu instead of restarting directly
+  startMenu.show();
 });
 
 // High score save handler
