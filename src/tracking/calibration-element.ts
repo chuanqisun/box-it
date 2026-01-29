@@ -365,7 +365,7 @@ export class CalibrationElement extends HTMLElement {
 
       if (currentObjectId === "box") {
         this.#drawBoxPreview(ctx, centroid.x, centroid.y, rotation);
-      } else if (currentObjectId === "tool1" || currentObjectId === "tool2") {
+      } else if (currentObjectId === "tool1" || currentObjectId === "tool2" || currentObjectId === "tool3") {
         this.#drawToolPreview(ctx, currentObjectId, centroid.x, centroid.y, rotation);
       }
     }

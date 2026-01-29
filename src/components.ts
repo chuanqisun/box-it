@@ -153,6 +153,8 @@ export interface WithTool {
     isActive: boolean;
     /** ID of the item being held by tool3 (mover) */
     heldItemId?: number;
+    /** Timestamp of last active state (for debouncing mover release) */
+    lastActiveTime?: number;
   };
 }
 

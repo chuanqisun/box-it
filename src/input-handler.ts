@@ -212,6 +212,7 @@ export class InputHandler {
             tool: {
               ...e.tool,
               isActive: true,
+              lastActiveTime: Date.now(),
             },
           };
 

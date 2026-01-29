@@ -8,8 +8,11 @@ import type { System } from "../engine";
  * - While holding an item, moves it with the tool position
  * - When released on the conveyor belt, item resumes normal movement
  * - When released outside the conveyor belt, item disappears and deducts 50 points
+ * 
+ * Uses debouncing (50ms) to prevent accidental release from brief touch interruptions.
  */
 const MOVER_DROP_PENALTY = -50;
+const RELEASE_DEBOUNCE_MS = 50;
 
 interface Point {
   x: number;
@@ -118,6 +121,27 @@ function checkToolItemCollision(
 }
 
 /**
+ * Calculate the world position for an item held by the mover tool.
+ * Applies the tool's offset in rotated coordinates.
+ */
+function getHeldItemPosition(
+  toolX: number,
+  toolY: number,
+  toolRotation: number,
+  toolXOffset: number,
+  toolYOffset: number
+): { x: number; y: number } {
+  const cos = Math.cos(toolRotation);
+  const sin = Math.sin(toolRotation);
+  const worldOffsetX = toolXOffset * cos - toolYOffset * sin;
+  const worldOffsetY = toolXOffset * sin + toolYOffset * cos;
+  return {
+    x: toolX + worldOffsetX,
+    y: toolY + worldOffsetY,
+  };
+}
+
+/**
  * Mover system that handles the mover tool (tool3) interactions.
  */
 export const moverSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) => {
@@ -128,6 +152,32 @@ export const moverSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =
   if (!conveyor) return world;
 
   const heldItemId = moverTool.tool.heldItemId;
+
+  // Helper to move the held item to the tool position
+  const moveHeldItemToTool = () => {
+    const toolPos = getHeldItemPosition(
+      moverTool.transform!.x,
+      moverTool.transform!.y,
+      moverTool.transform!.rotation,
+      moverTool.collision!.xOffset ?? 0,
+      moverTool.collision!.yOffset ?? 0
+    );
+    world.updateEntities((entities) =>
+      entities.map((e) => {
+        if (e.id === heldItemId && e.transform) {
+          return {
+            ...e,
+            transform: {
+              ...e.transform,
+              x: toolPos.x,
+              y: toolPos.y,
+            },
+          };
+        }
+        return e;
+      })
+    );
+  };
 
   // If tool is active
   if (moverTool.tool.isActive) {
@@ -188,33 +238,25 @@ export const moverSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =
       }
     } else {
       // Already holding an item, move it with the tool
-      world.updateEntities((entities) =>
-        entities.map((e) => {
-          if (e.id === heldItemId && e.transform) {
-            // Move item to tool position (center of tool's collision box)
-            const toolXOffset = moverTool.collision!.xOffset ?? 0;
-            const toolYOffset = moverTool.collision!.yOffset ?? 0;
-            const cos = Math.cos(moverTool.transform!.rotation);
-            const sin = Math.sin(moverTool.transform!.rotation);
-            const worldOffsetX = toolXOffset * cos - toolYOffset * sin;
-            const worldOffsetY = toolXOffset * sin + toolYOffset * cos;
-
-            return {
-              ...e,
-              transform: {
-                ...e.transform,
-                x: moverTool.transform!.x + worldOffsetX,
-                y: moverTool.transform!.y + worldOffsetY,
-              },
-            };
-          }
-          return e;
-        })
-      );
+      moveHeldItemToTool();
     }
   } else {
     // Tool is not active (released)
     if (heldItemId !== undefined) {
+      // Check debounce - only release if enough time has passed since last active
+      const lastActiveTime = moverTool.tool.lastActiveTime ?? 0;
+      const timeSinceActive = Date.now() - lastActiveTime;
+      
+      if (timeSinceActive < RELEASE_DEBOUNCE_MS) {
+        // Not enough time has passed - don't release yet, but still move the item
+        // This prevents flickering from brief touch interruptions
+        const heldItem = world.entities.find((e) => e.id === heldItemId);
+        if (heldItem?.transform) {
+          moveHeldItemToTool();
+        }
+        return world;
+      }
+
       const heldItem = world.entities.find((e) => e.id === heldItemId);
       if (heldItem?.transform) {
         // Check if item is on the conveyor belt
