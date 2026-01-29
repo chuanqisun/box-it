@@ -2,9 +2,12 @@ import { fromEvent, merge, Observable } from "rxjs";
 import { calculateSortedSides, getCanonicalRotation, getCentroid } from "./geometry";
 
 export function getInputRawEvent$(targetArea: HTMLElement): Observable<TouchEvent> {
-  const touchstart$ = fromEvent<TouchEvent>(targetArea, "touchstart");
-  const touchmove$ = fromEvent<TouchEvent>(targetArea, "touchmove");
-  const touchend$ = fromEvent<TouchEvent>(targetArea, "touchend");
+  // Use { passive: false } to ensure events are handled immediately without browser buffering.
+  // This is critical for low-latency input - passive listeners allow the browser to batch events.
+  const eventOptions = { passive: false } as const;
+  const touchstart$ = fromEvent<TouchEvent>(targetArea, "touchstart", eventOptions);
+  const touchmove$ = fromEvent<TouchEvent>(targetArea, "touchmove", eventOptions);
+  const touchend$ = fromEvent<TouchEvent>(targetArea, "touchend", eventOptions);
   return merge(touchstart$, touchmove$, touchend$);
 }
 
