@@ -13,8 +13,8 @@ import getBoxUrl from "./sounds/get-box.mp3";
 import shippedUrl from "./sounds/shipped.mp3";
 import tool1Url from "./sounds/tool-1.mp3";
 import tool2Url from "./sounds/tool-2.mp3";
-import tool3EngageUrl from "./sounds/tool-3-engage.mp3";
 import tool3DisengageUrl from "./sounds/tool-3-disengage.mp3";
+import tool3EngageUrl from "./sounds/tool-3-engage.mp3";
 
 // Import music file
 import backgroundMusicUrl from "./music/packing-line-panic.mp3";

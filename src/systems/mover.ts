@@ -8,7 +8,7 @@ import type { System } from "../engine";
  * - While holding an item, moves it with the tool position
  * - When released on the conveyor belt, item resumes normal movement
  * - When released outside the conveyor belt, item disappears and deducts 50 points
- * 
+ *
  * Uses debouncing (50ms) to prevent accidental release from brief touch interruptions.
  */
 const MOVER_DROP_PENALTY = -50;
@@ -124,13 +124,7 @@ function checkToolItemCollision(
  * Calculate the world position for an item held by the mover tool.
  * Applies the tool's offset in rotated coordinates.
  */
-function getHeldItemPosition(
-  toolX: number,
-  toolY: number,
-  toolRotation: number,
-  toolXOffset: number,
-  toolYOffset: number
-): { x: number; y: number } {
+function getHeldItemPosition(toolX: number, toolY: number, toolRotation: number, toolXOffset: number, toolYOffset: number): { x: number; y: number } {
   const cos = Math.cos(toolRotation);
   const sin = Math.sin(toolRotation);
   const worldOffsetX = toolXOffset * cos - toolYOffset * sin;
@@ -246,7 +240,7 @@ export const moverSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =
       // Check debounce - only release if enough time has passed since last active
       const lastActiveTime = moverTool.tool.lastActiveTime ?? 0;
       const timeSinceActive = Date.now() - lastActiveTime;
-      
+
       if (timeSinceActive < RELEASE_DEBOUNCE_MS) {
         // Not enough time has passed - don't release yet, but still move the item
         // This prevents flickering from brief touch interruptions
@@ -310,50 +304,52 @@ export const moverSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =
           };
 
           world.updateEntities((entities) =>
-            entities.map((e) => {
-              // Remove the held item from entities
-              if (e.id === heldItemId) {
-                return null;
-              }
-              if (e.tool?.id === "tool3") {
-                return {
-                  ...e,
-                  tool: {
-                    ...e.tool,
-                    heldItemId: undefined,
-                    isColliding: false,
-                  },
-                };
-              }
-              if (e.score) {
-                return {
-                  ...e,
-                  score: {
-                    ...e.score,
-                    value: e.score.value + MOVER_DROP_PENALTY,
-                  },
-                };
-              }
-              if (e.feedback) {
-                return {
-                  ...e,
-                  feedback: {
-                    ...e.feedback,
-                    effects: [...e.feedback.effects, feedbackEffect],
-                  },
-                };
-              }
-              if (e.gameState) {
-                return {
-                  ...e,
-                  gameState: {
-                    ...e.gameState,
-                    itemsProcessed: e.gameState.itemsProcessed + 1,
-                  },
-                };
-              }
-              return e;
-            }).filter((e): e is GameEntity => e !== null)
+            entities
+              .map((e) => {
+                // Remove the held item from entities
+                if (e.id === heldItemId) {
+                  return null;
+                }
+                if (e.tool?.id === "tool3") {
+                  return {
+                    ...e,
+                    tool: {
+                      ...e.tool,
+                      heldItemId: undefined,
+                      isColliding: false,
+                    },
+                  };
+                }
+                if (e.score) {
+                  return {
+                    ...e,
+                    score: {
+                      ...e.score,
+                      value: e.score.value + MOVER_DROP_PENALTY,
+                    },
+                  };
+                }
+                if (e.feedback) {
+                  return {
+                    ...e,
+                    feedback: {
+                      ...e.feedback,
+                      effects: [...e.feedback.effects, feedbackEffect],
+                    },
+                  };
+                }
+                if (e.gameState) {
+                  return {
+                    ...e,
+                    gameState: {
+                      ...e.gameState,
+                      itemsProcessed: e.gameState.itemsProcessed + 1,
+                    },
+                  };
+                }
+                return e;
+              })
+              .filter((e): e is GameEntity => e !== null)
           );
         }
       } else {
