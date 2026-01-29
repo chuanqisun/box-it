@@ -39,6 +39,10 @@ export interface WithCollision {
     height: number;
     type: "rectangle" | "circle";
     radius?: number;
+    /** X offset from the transform center in local coordinates */
+    xOffset?: number;
+    /** Y offset from the transform center in local coordinates */
+    yOffset?: number;
   };
 }
 

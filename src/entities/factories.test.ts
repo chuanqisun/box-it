@@ -107,10 +107,21 @@ describe("Entity Factories", () => {
       expect(entity.tool!.isColliding).toBe(false);
     });
 
-    it("should have circle collision", () => {
+    it("should have rectangle collision with offset support", () => {
       const entity = createToolEntity("tool1", 0, 0);
-      expect(entity.collision!.type).toBe("circle");
-      expect(entity.collision!.radius).toBe(EntityConstants.TOOL_SIZE / 2);
+      expect(entity.collision!.type).toBe("rectangle");
+      expect(entity.collision!.width).toBe(EntityConstants.TOOL_SIZE);
+      expect(entity.collision!.height).toBe(EntityConstants.TOOL_SIZE);
+      expect(entity.collision!.xOffset).toBe(0);
+      expect(entity.collision!.yOffset).toBe(0);
+    });
+
+    it("should accept custom dimensions and offsets", () => {
+      const entity = createToolEntity("tool2", 100, 100, 200, 150, 10, -5);
+      expect(entity.collision!.width).toBe(200);
+      expect(entity.collision!.height).toBe(150);
+      expect(entity.collision!.xOffset).toBe(10);
+      expect(entity.collision!.yOffset).toBe(-5);
     });
   });
 

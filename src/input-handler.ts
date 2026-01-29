@@ -72,22 +72,21 @@ export class InputHandler {
       const orientationOffset = boundingBox?.orientationOffset ?? 0;
       const effectiveRotation = rotation + orientationOffset;
 
-      // Apply offset from bounding box configuration in local (rotated) coordinates
-      // The offset is defined relative to the object's orientation, so we need to
-      // rotate it by the effective rotation to get the world-space offset
+      // For the box, we apply offset to position since it's rendered at the pointer location
+      // For tools, we keep the centroid as the transform position and store offset in collision
       const xOffset = boundingBox?.xOffset ?? 0;
       const yOffset = boundingBox?.yOffset ?? 0;
 
-      // Rotate offset by effective rotation to convert from local to world coordinates
-      const cos = Math.cos(effectiveRotation);
-      const sin = Math.sin(effectiveRotation);
-      const worldOffsetX = xOffset * cos - yOffset * sin;
-      const worldOffsetY = xOffset * sin + yOffset * cos;
-
-      const adjustedX = x + worldOffsetX;
-      const adjustedY = y + worldOffsetY;
-
       if (id === "box") {
+        // Rotate offset by effective rotation to convert from local to world coordinates
+        const cos = Math.cos(effectiveRotation);
+        const sin = Math.sin(effectiveRotation);
+        const worldOffsetX = xOffset * cos - yOffset * sin;
+        const worldOffsetY = xOffset * sin + yOffset * cos;
+
+        const adjustedX = x + worldOffsetX;
+        const adjustedY = y + worldOffsetY;
+
         // Update box dimensions if calibrated dimensions are available
         if (boundingBox?.width && boundingBox?.height) {
           this.updateBoxDimensions(boundingBox.width, boundingBox.height);
@@ -96,7 +95,17 @@ export class InputHandler {
         this.startConveyor();
       }
       if (id === "tool1" || id === "tool2") {
-        this.updateToolState(id, adjustedX, adjustedY, effectiveRotation);
+        // For tools, position is the centroid (rotation center)
+        // Offset is stored in collision and applied during rendering and collision detection
+        const toolBoundingBox = boundingBox
+          ? {
+              width: boundingBox.width,
+              height: boundingBox.height,
+              xOffset: boundingBox.xOffset,
+              yOffset: boundingBox.yOffset,
+            }
+          : undefined;
+        this.updateToolState(id, x, y, effectiveRotation, toolBoundingBox);
       }
     });
   }
@@ -148,23 +157,63 @@ export class InputHandler {
     this.world.updateEntities((entities) => entities.map((e) => (e.pointer ? { ...e, pointer: { ...this.pointerState } } : e))).next();
   }
 
+  /** Cached tool dimensions to avoid unnecessary updates */
+  private cachedToolDimensions: Map<string, { width: number; height: number; xOffset: number; yOffset: number }> = new Map();
+
   /**
-   * Update a tool's position and rotation.
+   * Update a tool's position, rotation, and optionally its bounding box dimensions.
    */
-  private updateToolState(toolId: "tool1" | "tool2", x: number, y: number, rotation: number): void {
+  private updateToolState(
+    toolId: "tool1" | "tool2",
+    x: number,
+    y: number,
+    rotation: number,
+    boundingBox?: { width: number; height: number; xOffset: number; yOffset: number }
+  ): void {
+    // Check if we need to update dimensions
+    let needsDimensionUpdate = false;
+    if (boundingBox) {
+      const cached = this.cachedToolDimensions.get(toolId);
+      if (
+        !cached ||
+        cached.width !== boundingBox.width ||
+        cached.height !== boundingBox.height ||
+        cached.xOffset !== boundingBox.xOffset ||
+        cached.yOffset !== boundingBox.yOffset
+      ) {
+        this.cachedToolDimensions.set(toolId, boundingBox);
+        needsDimensionUpdate = true;
+      }
+    }
+
     this.world
       .updateEntities((entities) =>
         entities.map((e) => {
           if (!e.tool || e.tool.id !== toolId || !e.transform || !e.collision) return e;
-          return {
+
+          // Transform position is the rotation center (centroid)
+          const updatedEntity = {
             ...e,
             transform: {
               ...e.transform,
-              x: x - e.collision.width / 2,
-              y: y - e.collision.height / 2,
+              x,
+              y,
               rotation,
             },
           };
+
+          // Update collision dimensions if needed
+          if (needsDimensionUpdate && boundingBox) {
+            updatedEntity.collision = {
+              ...e.collision,
+              width: boundingBox.width,
+              height: boundingBox.height,
+              xOffset: boundingBox.xOffset,
+              yOffset: boundingBox.yOffset,
+            };
+          }
+
+          return updatedEntity;
         })
       )
       .next();

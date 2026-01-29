@@ -83,12 +83,27 @@ export function createPointerEntity(): EntityData {
 
 /**
  * Create a tool entity.
+ * @param id - Tool identifier
+ * @param x - Center X position
+ * @param y - Center Y position
+ * @param width - Bounding box width (optional, defaults to TOOL_SIZE)
+ * @param height - Bounding box height (optional, defaults to TOOL_SIZE)
+ * @param xOffset - X offset from center in local coordinates (optional)
+ * @param yOffset - Y offset from center in local coordinates (optional)
  */
-export function createToolEntity(id: "tool1" | "tool2", x: number, y: number): EntityData {
+export function createToolEntity(
+  id: "tool1" | "tool2",
+  x: number,
+  y: number,
+  width: number = TOOL_SIZE,
+  height: number = TOOL_SIZE,
+  xOffset: number = 0,
+  yOffset: number = 0
+): EntityData {
   return {
     tool: { id, isColliding: false },
     transform: { x, y, rotation: 0, scale: 1 },
-    collision: { width: TOOL_SIZE, height: TOOL_SIZE, type: "circle", radius: TOOL_SIZE / 2 },
+    collision: { width, height, type: "rectangle", xOffset, yOffset },
   };
 }
 

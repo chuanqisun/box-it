@@ -69,27 +69,44 @@ function drawTools(ctx: CanvasRenderingContext2D, world: GameWorld) {
   const tools = world.entities.filter((e) => e.tool && e.transform && e.collision);
   for (const tool of tools) {
     if (!tool.transform || !tool.collision || !tool.tool) continue;
-    const centerX = tool.transform.x + tool.collision.width / 2;
-    const centerY = tool.transform.y + tool.collision.height / 2;
-    const radius =
-      tool.collision.type === "circle" && tool.collision.radius ? tool.collision.radius : Math.max(tool.collision.width, tool.collision.height) / 2;
+
+    // Transform position is the rotation center (centroid)
+    const centerX = tool.transform.x;
+    const centerY = tool.transform.y;
+
+    // Get bounding box dimensions and offset
+    const width = tool.collision.width;
+    const height = tool.collision.height;
+    const xOffset = tool.collision.xOffset ?? 0;
+    const yOffset = tool.collision.yOffset ?? 0;
+    const halfWidth = width / 2;
+    const halfHeight = height / 2;
 
     ctx.save();
+    // Translate to rotation center, then rotate
     ctx.translate(centerX, centerY);
     ctx.rotate(tool.transform.rotation);
+
+    // Apply offset in local coordinates (after rotation)
+    // The box center is at (xOffset, yOffset) relative to the rotation center
+    const boxCenterX = xOffset;
+    const boxCenterY = yOffset;
+    const left = boxCenterX - halfWidth;
+    const top = boxCenterY - halfHeight;
+
+    // Tool background
     ctx.fillStyle = tool.tool.isColliding ? "rgba(231, 76, 60, 0.5)" : "rgba(52, 152, 219, 0.35)";
     ctx.strokeStyle = tool.tool.isColliding ? "#e74c3c" : "#3498db";
     ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(0, 0, radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+    ctx.fillRect(left, top, width, height);
+    ctx.strokeRect(left, top, width, height);
 
+    // Tool label at box center
     ctx.fillStyle = "#fff";
     ctx.font = "bold 16px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(OBJECT_DISPLAY_NAMES[tool.tool.id] || tool.tool.id.toUpperCase(), 0, 0);
+    ctx.fillText(OBJECT_DISPLAY_NAMES[tool.tool.id] || tool.tool.id.toUpperCase(), boxCenterX, boxCenterY);
     ctx.restore();
   }
 }

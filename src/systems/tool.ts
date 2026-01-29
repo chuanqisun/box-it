@@ -222,39 +222,150 @@ const ironToolTransforms: IronTransform[] = [
   { input: "🏕️", output: "⛺", score: 100 },
 ];
 
+interface Point {
+  x: number;
+  y: number;
+}
+
 /**
- * Helper function to check collision between a circular tool and a rectangular item.
- * Returns true if there's any overlap (even tiny).
+ * Get the four corners of an oriented rectangle.
+ * @param centerX - X position of the rotation center
+ * @param centerY - Y position of the rotation center
+ * @param width - Width of the rectangle
+ * @param height - Height of the rectangle
+ * @param rotation - Rotation angle in radians
+ * @param xOffset - X offset of the box center from the rotation center (in local coordinates)
+ * @param yOffset - Y offset of the box center from the rotation center (in local coordinates)
+ */
+function getRectangleCorners(
+  centerX: number,
+  centerY: number,
+  width: number,
+  height: number,
+  rotation: number,
+  xOffset: number = 0,
+  yOffset: number = 0
+): Point[] {
+  const cos = Math.cos(rotation);
+  const sin = Math.sin(rotation);
+  const halfWidth = width / 2;
+  const halfHeight = height / 2;
+
+  // Corner positions relative to box center (which is at offset from rotation center)
+  const localCorners = [
+    { x: xOffset - halfWidth, y: yOffset - halfHeight }, // top-left
+    { x: xOffset + halfWidth, y: yOffset - halfHeight }, // top-right
+    { x: xOffset + halfWidth, y: yOffset + halfHeight }, // bottom-right
+    { x: xOffset - halfWidth, y: yOffset + halfHeight }, // bottom-left
+  ];
+
+  // Rotate corners around the rotation center and translate to world position
+  return localCorners.map((corner) => ({
+    x: centerX + corner.x * cos - corner.y * sin,
+    y: centerY + corner.x * sin + corner.y * cos,
+  }));
+}
+
+/**
+ * Get the axes (edge normals) of an oriented rectangle for SAT collision.
+ */
+function getRectangleAxes(corners: Point[]): Point[] {
+  const axes: Point[] = [];
+  for (let i = 0; i < corners.length; i++) {
+    const p1 = corners[i];
+    const p2 = corners[(i + 1) % corners.length];
+    // Edge vector
+    const edge = { x: p2.x - p1.x, y: p2.y - p1.y };
+    // Normal (perpendicular)
+    const length = Math.hypot(edge.x, edge.y);
+    if (length > 0) {
+      axes.push({ x: -edge.y / length, y: edge.x / length });
+    }
+  }
+  // Only need 2 unique axes for a rectangle (perpendicular edges)
+  return [axes[0], axes[1]];
+}
+
+/**
+ * Project a set of points onto an axis and get min/max.
+ */
+function projectOntoAxis(points: Point[], axis: Point): { min: number; max: number } {
+  let min = Infinity;
+  let max = -Infinity;
+  for (const point of points) {
+    const projection = point.x * axis.x + point.y * axis.y;
+    min = Math.min(min, projection);
+    max = Math.max(max, projection);
+  }
+  return { min, max };
+}
+
+/**
+ * Check if two projections overlap.
+ */
+function projectionsOverlap(a: { min: number; max: number }, b: { min: number; max: number }): boolean {
+  return a.max >= b.min && b.max >= a.min;
+}
+
+/**
+ * Check collision between an oriented rectangle (tool) and a point-based circle (item).
+ * Uses Separating Axis Theorem (SAT) for accurate oriented rectangle collision.
+ * Items are treated as small axis-aligned circles centered at their position.
  */
 function checkToolItemCollision(
-  toolX: number,
-  toolY: number,
-  toolRadius: number,
+  toolCenterX: number,
+  toolCenterY: number,
+  toolWidth: number,
+  toolHeight: number,
+  toolRotation: number,
+  toolXOffset: number,
+  toolYOffset: number,
   itemX: number,
   itemY: number,
   itemWidth: number,
   itemHeight: number
 ): boolean {
-  // Tool center
-  const toolCenterX = toolX + toolRadius;
-  const toolCenterY = toolY + toolRadius;
+  // Get the tool rectangle corners
+  const toolCorners = getRectangleCorners(
+    toolCenterX,
+    toolCenterY,
+    toolWidth,
+    toolHeight,
+    toolRotation,
+    toolXOffset,
+    toolYOffset
+  );
 
-  // Item bounds (item position is center-based)
-  const itemLeft = itemX - itemWidth / 2;
-  const itemRight = itemX + itemWidth / 2;
-  const itemTop = itemY - itemHeight / 2;
-  const itemBottom = itemY + itemHeight / 2;
+  // For items, treat them as small axis-aligned rectangles (no rotation)
+  const itemHalfWidth = itemWidth / 2;
+  const itemHalfHeight = itemHeight / 2;
+  const itemCorners: Point[] = [
+    { x: itemX - itemHalfWidth, y: itemY - itemHalfHeight },
+    { x: itemX + itemHalfWidth, y: itemY - itemHalfHeight },
+    { x: itemX + itemHalfWidth, y: itemY + itemHalfHeight },
+    { x: itemX - itemHalfWidth, y: itemY + itemHalfHeight },
+  ];
 
-  // Find the closest point on the item rectangle to the tool center
-  const closestX = Math.max(itemLeft, Math.min(toolCenterX, itemRight));
-  const closestY = Math.max(itemTop, Math.min(toolCenterY, itemBottom));
+  // Get axes from both rectangles
+  const toolAxes = getRectangleAxes(toolCorners);
+  const itemAxes = [
+    { x: 1, y: 0 }, // Horizontal axis for axis-aligned item
+    { x: 0, y: 1 }, // Vertical axis for axis-aligned item
+  ];
+  const allAxes = [...toolAxes, ...itemAxes];
 
-  // Calculate distance from tool center to closest point
-  const dx = toolCenterX - closestX;
-  const dy = toolCenterY - closestY;
-  const distanceSquared = dx * dx + dy * dy;
+  // Check for separation on each axis (SAT)
+  for (const axis of allAxes) {
+    const toolProjection = projectOntoAxis(toolCorners, axis);
+    const itemProjection = projectOntoAxis(itemCorners, axis);
+    if (!projectionsOverlap(toolProjection, itemProjection)) {
+      // Found a separating axis - no collision
+      return false;
+    }
+  }
 
-  return distanceSquared <= toolRadius * toolRadius;
+  // No separating axis found - collision detected
+  return true;
 }
 
 /**
@@ -291,7 +402,11 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
   for (const tool of tools) {
     if (!tool.tool || !tool.transform || !tool.collision) continue;
 
-    const toolRadius = tool.collision.radius ?? tool.collision.width / 2;
+    const toolWidth = tool.collision.width;
+    const toolHeight = tool.collision.height;
+    const toolRotation = tool.transform.rotation;
+    const toolXOffset = tool.collision.xOffset ?? 0;
+    const toolYOffset = tool.collision.yOffset ?? 0;
 
     for (const item of items) {
       if (!item.transform || !item.collision || !item.render || processedItems.has(item.id)) continue;
@@ -302,7 +417,11 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
       const isColliding = checkToolItemCollision(
         tool.transform.x,
         tool.transform.y,
-        toolRadius,
+        toolWidth,
+        toolHeight,
+        toolRotation,
+        toolXOffset,
+        toolYOffset,
         item.transform.x,
         item.transform.y,
         itemWidth,
@@ -456,7 +575,11 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
     entities.map((e) => {
       if (!e.tool || !e.transform || !e.collision) return e;
 
-      const toolRadius = e.collision.radius ?? e.collision.width / 2;
+      const toolWidth = e.collision.width;
+      const toolHeight = e.collision.height;
+      const toolRotation = e.transform.rotation;
+      const toolXOffset = e.collision.xOffset ?? 0;
+      const toolYOffset = e.collision.yOffset ?? 0;
       let isCurrentlyColliding = false;
 
       for (const item of currentItems) {
@@ -468,7 +591,11 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
           checkToolItemCollision(
             e.transform.x,
             e.transform.y,
-            toolRadius,
+            toolWidth,
+            toolHeight,
+            toolRotation,
+            toolXOffset,
+            toolYOffset,
             item.transform.x,
             item.transform.y,
             itemWidth,
