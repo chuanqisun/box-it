@@ -15,6 +15,10 @@ const isLive = new URLSearchParams(window.location.search).get("live") === "true
 const { createItemStream$, simulateInteractions$ } = isLive ? liveAI : mockAI;
 let generationStarted = false;
 
+/**
+ * Resets the internal generation state to allow a new theme to be used when restarting the game.
+ * Should be called before showing the theme selection menu again.
+ */
 export function resetGenerationState(): void {
   generationStarted = false;
 }

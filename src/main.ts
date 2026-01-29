@@ -222,7 +222,7 @@ themeRadios.forEach((radio) => {
   });
 });
 
-function getSelectedThemeValue(): string {
+function readThemeFromUI(): string {
   const selectedRadio = document.querySelector<HTMLInputElement>('input[name="theme"]:checked');
   if (selectedRadio?.value === "custom") {
     return customThemeInput.value.trim() || PREDEFINED_THEMES[0].label;
@@ -230,14 +230,23 @@ function getSelectedThemeValue(): string {
   return selectedRadio?.value || PREDEFINED_THEMES[0].label;
 }
 
-startGameBtn.addEventListener("click", () => {
-  const selectedTheme = getSelectedThemeValue();
+function handleStartGame(): void {
+  const selectedTheme = readThemeFromUI();
   setSelectedTheme(selectedTheme);
   startMenu.close();
   // Preload sounds on first user interaction (browser autoplay policy)
   preloadSounds();
   startBackgroundMusic();
   startGame();
+}
+
+startGameBtn.addEventListener("click", handleStartGame);
+
+// Allow Enter key to start game from custom theme input
+customThemeInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    handleStartGame();
+  }
 });
 
 restartGameBtn.addEventListener("click", () => {

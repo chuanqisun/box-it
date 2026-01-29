@@ -527,15 +527,17 @@ canvas {
 /* Theme Selection Styles */
 .theme-selection-section {
   margin-top: 16px;
+  border: none;
+  padding: 0;
 }
 
-.theme-selection-section > label {
-  display: block;
+.theme-selection-section > legend {
   font-size: 12px;
   letter-spacing: 1px;
   text-transform: uppercase;
   color: #888;
   margin-bottom: 10px;
+  padding: 0;
 }
 
 .theme-options {

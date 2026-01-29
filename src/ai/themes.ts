@@ -3,7 +3,6 @@ import { BehaviorSubject } from "rxjs";
 export interface Theme {
   id: string;
   label: string;
-  isCustom?: boolean;
 }
 
 export const PREDEFINED_THEMES: Theme[] = [
