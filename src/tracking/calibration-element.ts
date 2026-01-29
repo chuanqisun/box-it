@@ -33,12 +33,13 @@ interface TouchPoint {
   y: number;
 }
 
-export const CALIBRATION_OBJECT_IDS = ["box", "tool1", "tool2"];
+export const CALIBRATION_OBJECT_IDS = ["box", "tool1", "tool2", "tool3"];
 
 const OBJECT_DISPLAY_NAMES: Record<string, string> = {
   box: "box",
   tool1: "tape",
   tool2: "iron",
+  tool3: "mover",
 };
 
 /** Get display name for an object ID */
@@ -64,6 +65,7 @@ export const DEFAULT_CALIBRATION_PRESETS: Record<string, CalibrationPreset> = {
   box: { sides: [237, 385, 450], width: 400, height: 280, orientationDegrees: 32, xOffset: -63, yOffset: -39 },
   tool1: { sides: [115, 241, 302], width: 210, height: 130, orientationDegrees: -178, xOffset: -110, yOffset: -12 },
   tool2: { sides: [88, 179, 211], width: 206, height: 172, orientationDegrees: -10, xOffset: 64, yOffset: 0 },
+  tool3: { sides: [100, 200, 250], width: 180, height: 120, orientationDegrees: 0, xOffset: 0, yOffset: 0 },
 };
 
 /** Get default bounding box config for a specific object */
@@ -363,7 +365,7 @@ export class CalibrationElement extends HTMLElement {
 
       if (currentObjectId === "box") {
         this.#drawBoxPreview(ctx, centroid.x, centroid.y, rotation);
-      } else if (currentObjectId === "tool1" || currentObjectId === "tool2") {
+      } else if (currentObjectId === "tool1" || currentObjectId === "tool2" || currentObjectId === "tool3") {
         this.#drawToolPreview(ctx, currentObjectId, centroid.x, centroid.y, rotation);
       }
     }

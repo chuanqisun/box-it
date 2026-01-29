@@ -30,6 +30,7 @@ export { boxPackingSystem } from "./box-packing";
 export { interactionSystem } from "./interaction";
 export { zoneSystem } from "./zone";
 export { toolSystem } from "./tool";
+export { moverSystem } from "./mover";
 
 // Feedback Systems
 export { feedbackSystem } from "./feedback";

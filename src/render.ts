@@ -13,6 +13,7 @@ const OBJECT_DISPLAY_NAMES: Record<string, string> = {
   box: "BOX",
   tool1: "TAPE",
   tool2: "IRON",
+  tool3: "MOVER",
 };
 
 export function drawWorld(ctx: CanvasRenderingContext2D, world: GameWorld) {
@@ -37,8 +38,14 @@ export function drawWorld(ctx: CanvasRenderingContext2D, world: GameWorld) {
 
   const items = world.entities.filter((e) => e.itemState && !e.boxAnchor);
 
+  // Draw falling items
   items.forEach((item) => {
     if (item.itemState?.state === "falling") drawItem(ctx, item);
+  });
+
+  // Draw held items (being moved by mover tool) - rendered outside the belt clip region
+  items.forEach((item) => {
+    if (item.itemState?.state === "held") drawItem(ctx, item);
   });
 
   const conveyor = world.entities.find((e) => e.conveyor)?.conveyor;
@@ -69,6 +76,9 @@ function drawTools(ctx: CanvasRenderingContext2D, world: GameWorld) {
   const tools = world.entities.filter((e) => e.tool && e.transform && e.collision);
   for (const tool of tools) {
     if (!tool.transform || !tool.collision || !tool.tool) continue;
+
+    // Only render tools when they are active (touch is active)
+    if (!tool.tool.isActive) continue;
 
     // Transform position is the rotation center (centroid)
     const centerX = tool.transform.x;

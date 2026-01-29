@@ -90,7 +90,7 @@ export interface WithInteractions {
 
 export interface WithItemState {
   itemState: {
-    state: "belt" | "falling" | "packed";
+    state: "belt" | "falling" | "packed" | "held";
     fallScale: number;
   };
 }
@@ -148,8 +148,13 @@ export interface WithFeedback {
 
 export interface WithTool {
   tool: {
-    id: "tool1" | "tool2";
+    id: "tool1" | "tool2" | "tool3";
     isColliding: boolean;
+    isActive: boolean;
+    /** ID of the item being held by tool3 (mover) */
+    heldItemId?: number;
+    /** Timestamp of last active state (for debouncing mover release) */
+    lastActiveTime?: number;
   };
 }
 

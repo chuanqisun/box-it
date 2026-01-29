@@ -50,6 +50,7 @@ export function createGameWorld(config: GameInitConfig): World<GameEntity, GameG
     // Tools - positioned at corners
     .addEntity(createToolEntity("tool1", 40, 40))
     .addEntity(createToolEntity("tool2", window.innerWidth - TOOL_SIZE - 40, 40))
+    .addEntity(createToolEntity("tool3", window.innerWidth / 2, 40))
     // Game state entities
     .addEntity(createScoreEntity(initialScore))
     .addEntity(createGameStateEntity());

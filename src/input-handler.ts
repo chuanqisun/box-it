@@ -64,7 +64,15 @@ export class InputHandler {
    * Set up physical object tracking.
    */
   private setupObjectTracking(): void {
-    initObjectTracking(this.canvas, (id, x, y, rotation, confidence, activePoints, boundingBox) => {
+    initObjectTracking(this.canvas, (id, x, y, rotation, confidence, activePoints, boundingBox, eventType) => {
+      // Handle tool deactivation on "up" event
+      if (eventType === "up") {
+        if (id === "tool1" || id === "tool2" || id === "tool3") {
+          this.deactivateTool(id);
+        }
+        return;
+      }
+
       // Only process updates with reasonable confidence
       if (confidence < 0.3 || activePoints === 0) return;
 
@@ -94,7 +102,7 @@ export class InputHandler {
         this.handlePointerInput(adjustedX, adjustedY, effectiveRotation);
         this.startConveyor();
       }
-      if (id === "tool1" || id === "tool2") {
+      if (id === "tool1" || id === "tool2" || id === "tool3") {
         // For tools, position is the centroid (rotation center)
         // Offset is stored in collision and applied during rendering and collision detection
         const toolBoundingBox = boundingBox
@@ -162,9 +170,10 @@ export class InputHandler {
 
   /**
    * Update a tool's position, rotation, and optionally its bounding box dimensions.
+   * Also sets the tool as active (isActive: true).
    */
   private updateToolState(
-    toolId: "tool1" | "tool2",
+    toolId: "tool1" | "tool2" | "tool3",
     x: number,
     y: number,
     rotation: number,
@@ -200,6 +209,11 @@ export class InputHandler {
               y,
               rotation,
             },
+            tool: {
+              ...e.tool,
+              isActive: true,
+              lastActiveTime: Date.now(),
+            },
           };
 
           // Update collision dimensions if needed
@@ -214,6 +228,29 @@ export class InputHandler {
           }
 
           return updatedEntity;
+        })
+      )
+      .next();
+  }
+
+  /**
+   * Deactivate a tool when touch is released.
+   * Note: For tool3 (mover), the heldItemId is intentionally NOT cleared here.
+   * The mover system handles the release logic when it detects isActive=false,
+   * including proper item state transitions and potential score penalties.
+   */
+  private deactivateTool(toolId: "tool1" | "tool2" | "tool3"): void {
+    this.world
+      .updateEntities((entities) =>
+        entities.map((e) => {
+          if (!e.tool || e.tool.id !== toolId) return e;
+          return {
+            ...e,
+            tool: {
+              ...e.tool,
+              isActive: false,
+            },
+          };
         })
       )
       .next();

@@ -92,7 +92,7 @@ export function createPointerEntity(): EntityData {
  * @param yOffset - Y offset from center in local coordinates (optional)
  */
 export function createToolEntity(
-  id: "tool1" | "tool2",
+  id: "tool1" | "tool2" | "tool3",
   x: number,
   y: number,
   width: number = TOOL_SIZE,
@@ -101,7 +101,7 @@ export function createToolEntity(
   yOffset: number = 0
 ): EntityData {
   return {
-    tool: { id, isColliding: false },
+    tool: { id, isColliding: false, isActive: false },
     transform: { x, y, rotation: 0, scale: 1 },
     collision: { width, height, type: "rectangle", xOffset, yOffset },
   };
