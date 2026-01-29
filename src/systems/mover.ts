@@ -207,7 +207,7 @@ export const moverSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =
 
         if (isColliding) {
           // Pick up this item
-          playSound("tool1"); // Reuse tool1 sound for pickup
+          playSound("tool3Engage");
 
           world.updateEntities((entities) =>
             entities.map((e) => {
@@ -269,6 +269,7 @@ export const moverSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =
 
         if (isOnBelt) {
           // Release item back to belt
+          playSound("tool3Disengage");
           world.updateEntities((entities) =>
             entities.map((e) => {
               if (e.tool?.id === "tool3") {
@@ -295,7 +296,7 @@ export const moverSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =
           );
         } else {
           // Item dropped outside belt - remove item and deduct points
-          playSound("tool2"); // Reuse tool2 sound for drop
+          playSound("tool3Disengage");
 
           // Add feedback effect
           const feedbackEffect = {

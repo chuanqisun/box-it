@@ -13,17 +13,21 @@ import getBoxUrl from "./sounds/get-box.mp3";
 import shippedUrl from "./sounds/shipped.mp3";
 import tool1Url from "./sounds/tool-1.mp3";
 import tool2Url from "./sounds/tool-2.mp3";
+import tool3EngageUrl from "./sounds/tool-3-engage.mp3";
+import tool3DisengageUrl from "./sounds/tool-3-disengage.mp3";
 
 // Import music file
 import backgroundMusicUrl from "./music/packing-line-panic.mp3";
 
 // Sound effect types
-export type SoundEffect = "tool1" | "tool2" | "fallIntoBox" | "getBox" | "shipped";
+export type SoundEffect = "tool1" | "tool2" | "tool3Engage" | "tool3Disengage" | "fallIntoBox" | "getBox" | "shipped";
 
 // Sound effect URL mapping
 const soundEffectUrls: Record<SoundEffect, string> = {
   tool1: tool1Url,
   tool2: tool2Url,
+  tool3Engage: tool3EngageUrl,
+  tool3Disengage: tool3DisengageUrl,
   fallIntoBox: fallIntoBoxUrl,
   getBox: getBoxUrl,
   shipped: shippedUrl,
