@@ -163,6 +163,8 @@ export interface WithTool {
 export interface WithGameState {
   gameState: {
     status: "playing" | "won" | "lost";
+    /** Whether the timer has started (set to true when user grabs the first box) */
+    timerStarted: boolean;
     totalItemsSpawned: number;
     itemsProcessed: number;
     durationMs: number;

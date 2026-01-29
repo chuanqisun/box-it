@@ -69,6 +69,7 @@ export function resetGameWorld(world: World<GameEntity, GameGlobal>): void {
           ...e,
           gameState: {
             status: "playing" as const,
+            timerStarted: false,
             totalItemsSpawned: 0,
             itemsProcessed: 0,
             durationMs: 30_000,

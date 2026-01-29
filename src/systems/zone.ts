@@ -176,6 +176,9 @@ function buyBox(world: GameWorld): void {
       if (e.conveyor) {
         return { ...e, conveyor: { ...e.conveyor, isActive: true } };
       }
+      if (e.gameState) {
+        return { ...e, gameState: { ...e.gameState, timerStarted: true } };
+      }
       return e;
     })
   );

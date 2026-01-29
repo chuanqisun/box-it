@@ -123,6 +123,7 @@ export function createGameStateEntity(): EntityData {
   return {
     gameState: {
       status: "playing",
+      timerStarted: false,
       totalItemsSpawned: 0,
       itemsProcessed: 0,
       durationMs: 30_000,

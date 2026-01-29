@@ -22,6 +22,7 @@ describe("moverSystem", () => {
       .addEntity({
         gameState: {
           status: "playing",
+          timerStarted: true,
           totalItemsSpawned: 5,
           itemsProcessed: 0,
           durationMs: 30_000,

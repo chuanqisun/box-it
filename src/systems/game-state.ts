@@ -6,6 +6,9 @@ export const gameStateSystem: System<GameEntity, GameGlobal> = (world, deltaTime
   const gameState = gameStateEntity?.gameState;
   if (!gameState || gameState.status !== "playing") return world;
 
+  // Only decrement timer if it has been started (user grabbed the box)
+  if (!gameState.timerStarted) return world;
+
   const nextTimeRemaining = Math.max(0, gameState.timeRemainingMs - deltaTime);
 
   if (nextTimeRemaining <= 0) {

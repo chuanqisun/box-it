@@ -170,6 +170,11 @@ describe("Entity Factories", () => {
       expect(entity.gameState!.durationMs).toBe(30_000);
       expect(entity.gameState!.timeRemainingMs).toBe(30_000);
     });
+
+    it("should start with timer not started", () => {
+      const entity = createGameStateEntity();
+      expect(entity.gameState!.timerStarted).toBe(false);
+    });
   });
 
   describe("createItemEntity", () => {

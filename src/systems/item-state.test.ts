@@ -116,6 +116,7 @@ describe("itemStateSystem", () => {
         .addEntity({
           gameState: {
             status: "playing",
+            timerStarted: true,
             totalItemsSpawned: 5,
             itemsProcessed: 2,
             durationMs: 30_000,

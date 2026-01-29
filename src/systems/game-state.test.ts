@@ -22,6 +22,7 @@ describe("gameStateSystem", () => {
       world.addEntity({
         gameState: {
           status: "playing",
+          timerStarted: true,
           totalItemsSpawned: 0,
           itemsProcessed: 0,
           durationMs: 30_000,
@@ -36,10 +37,30 @@ describe("gameStateSystem", () => {
       expect(gameState?.status).toBe("playing");
     });
 
+    it("should not decrement time if timerStarted is false", () => {
+      world.addEntity({
+        gameState: {
+          status: "playing",
+          timerStarted: false,
+          totalItemsSpawned: 0,
+          itemsProcessed: 0,
+          durationMs: 30_000,
+          timeRemainingMs: 30_000,
+        },
+      });
+
+      gameStateSystem(world, 1000);
+
+      const gameState = world.entities.find((e) => e.gameState)?.gameState;
+      expect(gameState?.timeRemainingMs).toBe(30_000);
+      expect(gameState?.status).toBe("playing");
+    });
+
     it("should set status to won when time runs out", () => {
       world.addEntity({
         gameState: {
           status: "playing",
+          timerStarted: true,
           totalItemsSpawned: 0,
           itemsProcessed: 0,
           durationMs: 30_000,
@@ -60,6 +81,7 @@ describe("gameStateSystem", () => {
       world.addEntity({
         gameState: {
           status: "won",
+          timerStarted: true,
           totalItemsSpawned: 5,
           itemsProcessed: 5,
           durationMs: 30_000,
@@ -77,6 +99,7 @@ describe("gameStateSystem", () => {
       world.addEntity({
         gameState: {
           status: "lost",
+          timerStarted: true,
           totalItemsSpawned: 5,
           itemsProcessed: 5,
           durationMs: 30_000,
