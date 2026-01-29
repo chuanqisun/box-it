@@ -136,6 +136,27 @@ function getHeldItemPosition(toolX: number, toolY: number, toolRotation: number,
 }
 
 /**
+ * Calculate the center position of the tool's bounding box in world coordinates.
+ */
+function getToolBoxCenter(toolX: number, toolY: number, toolRotation: number, xOffset: number, yOffset: number): { x: number; y: number } {
+  const cos = Math.cos(toolRotation);
+  const sin = Math.sin(toolRotation);
+  return {
+    x: toolX + xOffset * cos - yOffset * sin,
+    y: toolY + xOffset * sin + yOffset * cos,
+  };
+}
+
+/**
+ * Calculate squared distance between two points.
+ */
+function distanceSquared(x1: number, y1: number, x2: number, y2: number): number {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  return dx * dx + dy * dy;
+}
+
+/**
  * Mover system that handles the mover tool (tool3) interactions.
  */
 export const moverSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) => {
@@ -173,63 +194,105 @@ export const moverSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =
     );
   };
 
+  // Get items that can be picked up
+  const items = world.entities.filter((e) => e.itemState?.state === "belt" && !e.boxAnchor && e.transform && e.collision && e.render);
+
+  // Calculate tool box center for distance comparisons
+  const toolBoxCenter = getToolBoxCenter(
+    moverTool.transform.x,
+    moverTool.transform.y,
+    moverTool.transform.rotation,
+    moverTool.collision.xOffset ?? 0,
+    moverTool.collision.yOffset ?? 0
+  );
+
+  // Find all colliding items and track if any are colliding (for visual feedback)
+  const collidingItems: { item: GameEntity; distSq: number }[] = [];
+
+  for (const item of items) {
+    if (!item.transform || !item.collision) continue;
+
+    const itemWidth = item.physical?.size ?? item.collision.width;
+    const itemHeight = item.physical?.size ?? item.collision.height;
+
+    const isColliding = checkToolItemCollision(
+      moverTool.transform.x,
+      moverTool.transform.y,
+      moverTool.collision.width,
+      moverTool.collision.height,
+      moverTool.transform.rotation,
+      moverTool.collision.xOffset ?? 0,
+      moverTool.collision.yOffset ?? 0,
+      item.transform.x,
+      item.transform.y,
+      itemWidth,
+      itemHeight
+    );
+
+    if (isColliding) {
+      const distSq = distanceSquared(toolBoxCenter.x, toolBoxCenter.y, item.transform.x, item.transform.y);
+      collidingItems.push({ item, distSq });
+    }
+  }
+
+  // Update collision state for visual feedback when not holding an item
+  if (heldItemId === undefined) {
+    const hasCollision = collidingItems.length > 0;
+    if (moverTool.tool.isColliding !== hasCollision) {
+      world.updateEntities((entities) =>
+        entities.map((e) => {
+          if (e.tool?.id === "tool3") {
+            return {
+              ...e,
+              tool: {
+                ...e.tool,
+                isColliding: hasCollision,
+              },
+            };
+          }
+          return e;
+        })
+      );
+    }
+  }
+
   // If tool is active
   if (moverTool.tool.isActive) {
     // If not holding anything, try to pick up an item
     if (heldItemId === undefined) {
-      const items = world.entities.filter((e) => e.itemState?.state === "belt" && !e.boxAnchor && e.transform && e.collision && e.render);
+      if (collidingItems.length > 0) {
+        // Sort by distance and pick the closest item to the tool box center
+        collidingItems.sort((a, b) => a.distSq - b.distSq);
+        const closestItem = collidingItems[0].item;
 
-      for (const item of items) {
-        if (!item.transform || !item.collision) continue;
+        // Pick up this item
+        playSound("tool3Engage");
 
-        const itemWidth = item.physical?.size ?? item.collision.width;
-        const itemHeight = item.physical?.size ?? item.collision.height;
-
-        const isColliding = checkToolItemCollision(
-          moverTool.transform.x,
-          moverTool.transform.y,
-          moverTool.collision.width,
-          moverTool.collision.height,
-          moverTool.transform.rotation,
-          moverTool.collision.xOffset ?? 0,
-          moverTool.collision.yOffset ?? 0,
-          item.transform.x,
-          item.transform.y,
-          itemWidth,
-          itemHeight
+        world.updateEntities((entities) =>
+          entities.map((e) => {
+            if (e.tool?.id === "tool3") {
+              return {
+                ...e,
+                tool: {
+                  ...e.tool,
+                  heldItemId: closestItem.id,
+                  isColliding: true,
+                },
+              };
+            }
+            if (e.id === closestItem.id && e.itemState) {
+              return {
+                ...e,
+                itemState: {
+                  ...e.itemState,
+                  state: "held" as const,
+                  raisedScale: 1.2,
+                },
+              };
+            }
+            return e;
+          })
         );
-
-        if (isColliding) {
-          // Pick up this item
-          playSound("tool3Engage");
-
-          world.updateEntities((entities) =>
-            entities.map((e) => {
-              if (e.tool?.id === "tool3") {
-                return {
-                  ...e,
-                  tool: {
-                    ...e.tool,
-                    heldItemId: item.id,
-                    isColliding: true,
-                  },
-                };
-              }
-              if (e.id === item.id && e.itemState) {
-                return {
-                  ...e,
-                  itemState: {
-                    ...e.itemState,
-                    state: "held" as const,
-                    raisedScale: 1.2,
-                  },
-                };
-              }
-              return e;
-            })
-          );
-          break;
-        }
       }
     } else {
       // Already holding an item, move it with the tool
