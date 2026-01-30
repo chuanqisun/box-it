@@ -150,14 +150,7 @@ export function createItemEntity(x: number, y: number, emoji: string, name: stri
 /**
  * Create a packed item entity (item that landed in the box).
  */
-export function createPackedItemEntity(
-  relX: number,
-  relY: number,
-  rotation: number,
-  emoji: string,
-  name: string,
-  fallScale: number
-): EntityData {
+export function createPackedItemEntity(relX: number, relY: number, rotation: number, emoji: string, name: string, fallScale: number): EntityData {
   return {
     transform: { x: relX, y: relY, rotation, scale: 0 },
     render: { emoji },
