@@ -8,7 +8,7 @@ import type { System } from "../engine";
 const ITEM_SPEED_BELT = 160;
 const ITEM_SIZE = 80;
 const GAME_DURATION_MS = 45_000;
-const TARGET_ITEMS = 40;
+const TARGET_ITEMS = 20;
 const BASE_SPAWN_INTERVAL = GAME_DURATION_MS / TARGET_ITEMS;
 
 const isLive = new URLSearchParams(window.location.search).get("live") === "true";
@@ -43,7 +43,7 @@ export const spawningSystem: System<GameEntity, GameGlobal> = (world, deltaTime)
       },
     });
 
-    simulateInteractions$(items$, 30).subscribe({
+    simulateInteractions$(items$, TARGET_ITEMS * 4).subscribe({
       next: (interaction) => {
         world.updateEntities((entities) =>
           entities.map((e) =>
