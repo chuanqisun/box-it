@@ -89,7 +89,9 @@ export async function loadCalibratedObjects(container: HTMLElement, onCalibrate:
       if (isTool) {
         const toggle = document.createElement("label");
         toggle.className = "tool-toggle";
-        toggle.innerHTML = `<input type="checkbox" class="tool-enable-checkbox" data-tool-id="${id}" ${isEnabled ? "checked" : ""} /><span class="toggle-slider"></span>`;
+        toggle.innerHTML = `<input type="checkbox" class="tool-enable-checkbox" data-tool-id="${id}" ${
+          isEnabled ? "checked" : ""
+        } /><span class="toggle-slider"></span>`;
         toggle.title = "Enable/disable this tool";
         wrapper.appendChild(toggle);
 
