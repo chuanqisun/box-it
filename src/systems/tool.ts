@@ -4,9 +4,9 @@ import type { System } from "../engine";
 
 /**
  * The box tool (tool1) interacts with everything by turning them into 📦
- * It has a fixed cost of -50 score per use
+ * It has a fixed cost of -30 score per use
  */
-const BOX_TOOL_COST = -50;
+const BOX_TOOL_COST = -30;
 
 /**
  * The flat iron tool (tool2) interacts with the following predefined emojis. It may result in positive or negative score change.
