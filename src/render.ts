@@ -147,7 +147,7 @@ function drawZones(ctx: CanvasRenderingContext2D, world: GameWorld) {
         ctx.textAlign = "center";
         if (!hasBox) {
           ctx.fillText("GET BOX", 0, -15);
-          ctx.fillText("($200)", 0, 15);
+          ctx.fillText("($100)", 0, 15);
           ctx.globalAlpha = (Math.sin(Date.now() / 200) + 1) / 4;
           ctx.fillStyle = "#fff";
           ctx.fillText("↓", 0, 45);

@@ -71,7 +71,7 @@ function shipBox(world: GameWorld): void {
   // Play shipped sound
   playSound("shipped");
 
-  let boxValue = packed.length * 100;
+  let boxValue = packed.length * 150;
 
   const newFeedback = {
     text: `SHIPPED! +$${boxValue}`,
@@ -123,7 +123,7 @@ function buyBox(world: GameWorld): void {
   playSound("getBox");
 
   const feedback = {
-    text: "NEW BOX -$200",
+    text: "NEW BOX -$100",
     x: 150,
     y: world.global.canvas.height - 200,
     color: "#f1c40f",
@@ -144,7 +144,7 @@ function buyBox(world: GameWorld): void {
         };
       }
       if (e.score) {
-        return { ...e, score: { ...e.score, value: e.score.value - 200 } };
+        return { ...e, score: { ...e.score, value: e.score.value - 100 } };
       }
       if (e.box && e.transform && e.collision) {
         return {
