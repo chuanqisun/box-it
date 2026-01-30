@@ -119,8 +119,8 @@ describe("itemStateSystem", () => {
             timerStarted: true,
             totalItemsSpawned: 5,
             itemsProcessed: 2,
-            durationMs: 30_000,
-            timeRemainingMs: 30_000,
+            durationMs: 45_000,
+            timeRemainingMs: 45_000,
           },
         })
         .addEntity({

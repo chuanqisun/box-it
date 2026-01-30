@@ -25,8 +25,8 @@ describe("gameStateSystem", () => {
           timerStarted: true,
           totalItemsSpawned: 0,
           itemsProcessed: 0,
-          durationMs: 30_000,
-          timeRemainingMs: 30_000,
+          durationMs: 45_000,
+          timeRemainingMs: 45_000,
         },
       });
 
@@ -44,15 +44,15 @@ describe("gameStateSystem", () => {
           timerStarted: false,
           totalItemsSpawned: 0,
           itemsProcessed: 0,
-          durationMs: 30_000,
-          timeRemainingMs: 30_000,
+          durationMs: 45_000,
+          timeRemainingMs: 45_000,
         },
       });
 
       gameStateSystem(world, 1000);
 
       const gameState = world.entities.find((e) => e.gameState)?.gameState;
-      expect(gameState?.timeRemainingMs).toBe(30_000);
+      expect(gameState?.timeRemainingMs).toBe(45_000);
       expect(gameState?.status).toBe("playing");
     });
 
@@ -63,7 +63,7 @@ describe("gameStateSystem", () => {
           timerStarted: true,
           totalItemsSpawned: 0,
           itemsProcessed: 0,
-          durationMs: 30_000,
+          durationMs: 45_000,
           timeRemainingMs: 500,
         },
       });
@@ -84,7 +84,7 @@ describe("gameStateSystem", () => {
           timerStarted: true,
           totalItemsSpawned: 5,
           itemsProcessed: 5,
-          durationMs: 30_000,
+          durationMs: 45_000,
           timeRemainingMs: 0,
         },
       });
@@ -102,7 +102,7 @@ describe("gameStateSystem", () => {
           timerStarted: true,
           totalItemsSpawned: 5,
           itemsProcessed: 5,
-          durationMs: 30_000,
+          durationMs: 45_000,
           timeRemainingMs: 0,
         },
       });

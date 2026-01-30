@@ -167,8 +167,8 @@ describe("Entity Factories", () => {
 
     it("should start with full time remaining", () => {
       const entity = createGameStateEntity();
-      expect(entity.gameState!.durationMs).toBe(30_000);
-      expect(entity.gameState!.timeRemainingMs).toBe(30_000);
+      expect(entity.gameState!.durationMs).toBe(45_000);
+      expect(entity.gameState!.timeRemainingMs).toBe(45_000);
     });
 
     it("should start with timer not started", () => {
