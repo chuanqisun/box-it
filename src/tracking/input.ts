@@ -1,8 +1,8 @@
 import { fromEvent, merge, Observable } from "rxjs";
 import { calculateSortedSides, getCanonicalRotation, getCentroid } from "./geometry";
 
-/** Maximum relative error for signature matching (15% tolerance) */
-const MAX_RELATIVE_ERROR = 0.15;
+/** Maximum relative error for signature matching (10% tolerance) */
+const MAX_RELATIVE_ERROR = 0.1;
 
 export function getInputRawEvent$(targetArea: HTMLElement): Observable<TouchEvent> {
   // Use { passive: false } to ensure events are handled immediately without browser buffering.
