@@ -26,6 +26,17 @@ const THEME_MOCK_ITEMS: Record<string, MockItem[]> = {
     { name: "Handbag", emoji: "👜", category: "Accessories", packable: true },
   ],
   "Disaster Relief Donation": [
+    // --- PERISHABLES: RAW/WET (Incompatible with dry containers) ---
+    { name: "Bunch of Grapes", emoji: "🍇", category: "Perishable", packable: false },
+    { name: "Vine-Ripened Tomato", emoji: "🍅", category: "Perishable", packable: false },
+    { name: "Kiwi", emoji: "🥝", category: "Perishable", packable: false },
+    { name: "Whole Pineapple", emoji: "🍍", category: "Perishable", packable: false },
+    { name: "Ear of Corn", emoji: "🌽", category: "Perishable", packable: false },
+    { name: "Russet Potato", emoji: "🥔", category: "Perishable", packable: false },
+    { name: "Strips of Bacon", emoji: "🥓", category: "Raw Meat", packable: false },
+    { name: "Raw Beef", emoji: "🥩", category: "Raw Meat", packable: false },
+    { name: "Raw Egg", emoji: "🥚", category: "Fragile Perishable", packable: false },
+
     // --- DRY GOODS: CLOTHING (Washable) ---
     { name: "Short-Sleeved Cotton Shirt", emoji: "👕", category: "Clothing", packable: true },
     { name: "Denim Jeans", emoji: "👖", category: "Clothing", packable: true },
@@ -39,17 +50,6 @@ const THEME_MOCK_ITEMS: Record<string, MockItem[]> = {
 
     // --- DRY GOODS: SHELF-STABLE FOOD ---
     { name: "Chocolate Bar", emoji: "🍫", category: "Food", packable: true },
-
-    // --- PERISHABLES: RAW/WET (Incompatible with dry containers) ---
-    { name: "Bunch of Grapes", emoji: "🍇", category: "Perishable", packable: false },
-    { name: "Vine-Ripened Tomato", emoji: "🍅", category: "Perishable", packable: false },
-    { name: "Kiwi", emoji: "🥝", category: "Perishable", packable: false },
-    { name: "Whole Pineapple", emoji: "🍍", category: "Perishable", packable: false },
-    { name: "Ear of Corn", emoji: "🌽", category: "Perishable", packable: false },
-    { name: "Russet Potato", emoji: "🥔", category: "Perishable", packable: false },
-    { name: "Strips of Bacon", emoji: "🥓", category: "Raw Meat", packable: false },
-    { name: "Raw Beef", emoji: "🥩", category: "Raw Meat", packable: false },
-    { name: "Raw Egg", emoji: "🥚", category: "Fragile Perishable", packable: false },
   ],
   "Back to School": [
     { name: "Backpack", emoji: "🎒", category: "Accessories", packable: true },
@@ -117,47 +117,29 @@ export function simulateInteractions$(items$: Observable<GeneratedItem>): Observ
           const item1 = items[i];
           const item2 = items[j];
 
-          // Check if items are packable together based on compatibility rules
           const item1Packable = isPackable(item1.name);
           const item2Packable = isPackable(item2.name);
-          const item1Category = getCategory(item1.name);
-          const item2Category = getCategory(item2.name);
 
-          // Both items are packable (clothing/shelf-stable food) -> Noop (skip)
+          // Both items are packable -> Noop (skip)
           if (item1Packable && item2Packable) {
             continue;
           }
 
-          // Raw meat or fragile perishable with anything -> Death (biological hazard)
-          if (
-            item1Category === "Raw Meat" ||
-            item2Category === "Raw Meat" ||
-            item1Category === "Fragile Perishable" ||
-            item2Category === "Fragile Perishable"
-          ) {
+          // Both non-packable -> random Perished or Spoiled
+          if (!item1Packable && !item2Packable) {
             interactions.push({
               itemOneName: item1.name,
               itemTwoName: item2.name,
-              speechBubbleWord: "Perished!",
+              speechBubbleWord: Math.random() < 0.5 ? "Perished!" : "Spoiled!",
             });
             continue;
           }
 
-          // Regular perishables with packable items -> Poop (contamination)
-          if ((item1Category === "Perishable" && item2Packable) || (item2Category === "Perishable" && item1Packable)) {
-            interactions.push({
-              itemOneName: item1.name,
-              itemTwoName: item2.name,
-              speechBubbleWord: "Contaminated!",
-            });
-            continue;
-          }
-
-          // Two non-packables together -> Poop (spoilage)
+          // One non-packable with one packable -> Contaminated
           interactions.push({
             itemOneName: item1.name,
             itemTwoName: item2.name,
-            speechBubbleWord: "Spoiled!",
+            speechBubbleWord: "Contaminated!",
           });
         }
       }
@@ -169,19 +151,14 @@ export function simulateInteractions$(items$: Observable<GeneratedItem>): Observ
   );
 }
 
-// Helper functions to check item properties
+// Helper function to check if item is packable
 function isPackable(itemName: string): boolean {
   for (const items of Object.values(THEME_MOCK_ITEMS)) {
     const item = items.find((i) => i.name === itemName);
-    if (item) return item.packable ?? true; // Default items are packable
+    if (item) return item.packable ?? true;
   }
-  return true; // Default items are packable
-}
-
-function getCategory(itemName: string): string | undefined {
-  for (const items of Object.values(THEME_MOCK_ITEMS)) {
-    const item = items.find((i) => i.name === itemName);
-    if (item) return item.category;
-  }
-  return undefined;
+  // Check DEFAULT_MOCK_ITEMS as well
+  const defaultItem = DEFAULT_MOCK_ITEMS.find((i) => i.name === itemName);
+  if (defaultItem) return defaultItem.packable ?? true;
+  return true;
 }

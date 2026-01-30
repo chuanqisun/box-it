@@ -43,32 +43,30 @@ export const spawningSystem: System<GameEntity, GameGlobal> = (world, deltaTime)
       },
     });
 
-    simulateInteractions$(items$, 30)
-      .pipe(take(30))
-      .subscribe({
-        next: (interaction) => {
-          world.updateEntities((entities) =>
-            entities.map((e) =>
-              e.interactions
-                ? {
-                    ...e,
-                    interactions: {
-                      ...e.interactions,
-                      rules: [
-                        ...e.interactions.rules,
-                        {
-                          itemOne: interaction.itemOneName,
-                          itemTwo: interaction.itemTwoName,
-                          effect: interaction.speechBubbleWord,
-                        },
-                      ],
-                    },
-                  }
-                : e
-            )
-          );
-        },
-      });
+    simulateInteractions$(items$, 30).subscribe({
+      next: (interaction) => {
+        world.updateEntities((entities) =>
+          entities.map((e) =>
+            e.interactions
+              ? {
+                  ...e,
+                  interactions: {
+                    ...e.interactions,
+                    rules: [
+                      ...e.interactions.rules,
+                      {
+                        itemOne: interaction.itemOneName,
+                        itemTwo: interaction.itemTwoName,
+                        effect: interaction.speechBubbleWord,
+                      },
+                    ],
+                  },
+                }
+              : e
+          )
+        );
+      },
+    });
   }
 
   const conveyorEntity = world.entities.find((e) => e.conveyor);
