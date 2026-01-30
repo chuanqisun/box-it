@@ -292,7 +292,7 @@ describe("toolSystem", () => {
           render: { emoji: "🍎" },
           name: { value: "apple" },
           itemState: { state: "packed", fallScale: 1 },
-          boxAnchor: { relX: 50, relY: 50 },
+          boxAnchor: { relX: 50, relY: 50, relRotation: 0 },
           physical: { size: 45 },
         });
 
