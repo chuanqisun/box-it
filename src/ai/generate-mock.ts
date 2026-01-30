@@ -90,6 +90,15 @@ function getMockItemsForTheme(theme: string): MockItem[] {
   return THEME_MOCK_ITEMS[theme] ?? DEFAULT_MOCK_ITEMS;
 }
 
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 export function createItemStream$(props: ItemStreamProps): Observable<GeneratedItem> {
   const themeMockItems = getMockItemsForTheme(props.theme);
   const items: GeneratedItem[] = Array.from({ length: props.count }, (_, i) => {
@@ -100,7 +109,9 @@ export function createItemStream$(props: ItemStreamProps): Observable<GeneratedI
     };
   });
 
-  return from(items).pipe(concatMap((item) => of(item).pipe(delay(50))));
+  const shuffledItems = shuffleArray(items);
+
+  return from(shuffledItems).pipe(concatMap((item) => of(item).pipe(delay(50))));
 }
 
 export function simulateInteractions$(items$: Observable<GeneratedItem>): Observable<Interaction> {
