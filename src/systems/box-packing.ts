@@ -85,7 +85,7 @@ export const boxPackingSystem: System<GameEntity, GameGlobal> = (world, _deltaTi
     playSound("fallIntoBox");
 
     world.addEntity({
-      transform: { x: relX, y: relY, rotation: -boxRotation, scale: 0 },
+      transform: { x: relX, y: relY, rotation: 0, scale: 0 },
       render: { emoji: item.render?.emoji ?? "📦" },
       name: item.name ? { ...item.name } : { value: item.render?.emoji ?? "📦" },
       collision: { width: ITEM_SIZE, height: ITEM_SIZE, type: "rectangle" },
@@ -97,21 +97,19 @@ export const boxPackingSystem: System<GameEntity, GameGlobal> = (world, _deltaTi
     world.removeEntity(item.id);
   }
 
-  // Also update packed scaling and rotation to keep them upright
+  // Update packed item scaling (items rotate with the box, so no rotation update needed)
   return world.updateEntities((entities) =>
     entities.map((e) => {
       if (e.boxAnchor && e.transform && e.itemState) {
         const targetScale = e.itemState.fallScale;
         const currentScale = e.transform.scale;
-        const targetRotation = -boxRotation;
 
-        if (currentScale < targetScale || e.transform.rotation !== targetRotation) {
+        if (currentScale < targetScale) {
           return {
             ...e,
             transform: {
               ...e.transform,
               scale: Math.min(targetScale, currentScale + 0.15),
-              rotation: targetRotation,
             },
           };
         }
