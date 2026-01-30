@@ -33,7 +33,7 @@ describe("gameStateSystem", () => {
       gameStateSystem(world, 1000);
 
       const gameState = world.entities.find((e) => e.gameState)?.gameState;
-      expect(gameState?.timeRemainingMs).toBe(29_000);
+      expect(gameState?.timeRemainingMs).toBe(44_000);
       expect(gameState?.status).toBe("playing");
     });
 
