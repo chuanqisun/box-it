@@ -10,20 +10,20 @@ interface MockItem {
 
 const THEME_MOCK_ITEMS: Record<string, MockItem[]> = {
   "Black Friday Sale": [
-    { name: "TV", emoji: "📺" },
-    { name: "Laptop", emoji: "💻" },
-    { name: "Headphones", emoji: "🎧" },
-    { name: "Smartphone", emoji: "📱" },
-    { name: "Gaming Console", emoji: "🎮" },
-    { name: "Sneakers", emoji: "👟" },
-    { name: "Watch", emoji: "⌚" },
-    { name: "Camera", emoji: "📷" },
-    { name: "Tablet", emoji: "📲" },
-    { name: "Blender", emoji: "🧊" },
-    { name: "Coffee Maker", emoji: "☕" },
-    { name: "Vacuum", emoji: "🧹" },
-    { name: "Jacket", emoji: "🧥" },
-    { name: "Handbag", emoji: "👜" },
+    { name: "TV", emoji: "📺", category: "Electronics", packable: true },
+    { name: "Laptop", emoji: "💻", category: "Electronics", packable: true },
+    { name: "Headphones", emoji: "🎧", category: "Electronics", packable: true },
+    { name: "Smartphone", emoji: "📱", category: "Electronics", packable: true },
+    { name: "Gaming Console", emoji: "🎮", category: "Electronics", packable: true },
+    { name: "Sneakers", emoji: "👟", category: "Clothing", packable: true },
+    { name: "Watch", emoji: "⌚", category: "Accessories", packable: true },
+    { name: "Camera", emoji: "📷", category: "Electronics", packable: true },
+    { name: "Tablet", emoji: "📲", category: "Electronics", packable: true },
+    { name: "Blender", emoji: "🧊", category: "Appliances", packable: true },
+    { name: "Coffee Maker", emoji: "☕", category: "Appliances", packable: true },
+    { name: "Vacuum", emoji: "🧹", category: "Appliances", packable: true },
+    { name: "Jacket", emoji: "🧥", category: "Clothing", packable: true },
+    { name: "Handbag", emoji: "👜", category: "Accessories", packable: true },
   ],
   "Disaster Relief Donation": [
     // --- DRY GOODS: CLOTHING (Washable) ---
@@ -52,38 +52,38 @@ const THEME_MOCK_ITEMS: Record<string, MockItem[]> = {
     { name: "Raw Egg", emoji: "🥚", category: "Fragile Perishable", packable: false },
   ],
   "Back to School": [
-    { name: "Backpack", emoji: "🎒" },
-    { name: "Notebook", emoji: "📓" },
-    { name: "Pencils", emoji: "✏️" },
-    { name: "Calculator", emoji: "🖩" },
-    { name: "Scissors", emoji: "✂️" },
-    { name: "Ruler", emoji: "📏" },
-    { name: "Glue", emoji: "📎" },
-    { name: "Lunchbox", emoji: "🍱" },
-    { name: "Crayons", emoji: "🖍️" },
-    { name: "Textbook", emoji: "📚" },
-    { name: "Eraser", emoji: "🧽" },
-    { name: "Highlighter", emoji: "🖊️" },
-    { name: "Folder", emoji: "📂" },
-    { name: "Markers", emoji: "🖌️" },
+    { name: "Backpack", emoji: "🎒", category: "Accessories", packable: true },
+    { name: "Notebook", emoji: "📓", category: "School Supplies", packable: true },
+    { name: "Pencils", emoji: "✏️", category: "School Supplies", packable: true },
+    { name: "Calculator", emoji: "🖩", category: "Electronics", packable: true },
+    { name: "Scissors", emoji: "✂️", category: "School Supplies", packable: true },
+    { name: "Ruler", emoji: "📏", category: "School Supplies", packable: true },
+    { name: "Glue", emoji: "📎", category: "School Supplies", packable: true },
+    { name: "Lunchbox", emoji: "🍱", category: "Accessories", packable: true },
+    { name: "Crayons", emoji: "🖍️", category: "School Supplies", packable: true },
+    { name: "Textbook", emoji: "📚", category: "School Supplies", packable: true },
+    { name: "Eraser", emoji: "🧽", category: "School Supplies", packable: true },
+    { name: "Highlighter", emoji: "🖊️", category: "School Supplies", packable: true },
+    { name: "Folder", emoji: "📂", category: "School Supplies", packable: true },
+    { name: "Markers", emoji: "🖌️", category: "School Supplies", packable: true },
   ],
 };
 
 const DEFAULT_MOCK_ITEMS: MockItem[] = [
-  { name: "Apple", emoji: "🍎" },
-  { name: "Banana", emoji: "🍌" },
-  { name: "Cherry", emoji: "🍒" },
-  { name: "Avocado", emoji: "🥑" },
-  { name: "Burger", emoji: "🍔" },
-  { name: "Pizza", emoji: "🍕" },
-  { name: "Ice Cream", emoji: "🍦" },
-  { name: "Donut", emoji: "🍩" },
-  { name: "Cookie", emoji: "🍪" },
-  { name: "Beer", emoji: "🍺" },
-  { name: "Basketball", emoji: "🏀" },
-  { name: "Soccer Ball", emoji: "⚽" },
-  { name: "Car", emoji: "🚗" },
-  { name: "Rocket", emoji: "🚀" },
+  { name: "Apple", emoji: "🍎", category: "Perishable", packable: false },
+  { name: "Banana", emoji: "🍌", category: "Perishable", packable: false },
+  { name: "Cherry", emoji: "🍒", category: "Perishable", packable: false },
+  { name: "Avocado", emoji: "🥑", category: "Perishable", packable: false },
+  { name: "Burger", emoji: "🍔", category: "Perishable", packable: false },
+  { name: "Pizza", emoji: "🍕", category: "Perishable", packable: false },
+  { name: "Ice Cream", emoji: "🍦", category: "Perishable", packable: false },
+  { name: "Donut", emoji: "🍩", category: "Perishable", packable: false },
+  { name: "Cookie", emoji: "🍪", category: "Food", packable: true },
+  { name: "Beer", emoji: "🍺", category: "Beverage", packable: true },
+  { name: "Basketball", emoji: "🏀", category: "Sports", packable: true },
+  { name: "Soccer Ball", emoji: "⚽", category: "Sports", packable: true },
+  { name: "Car", emoji: "🚗", category: "Toys", packable: true },
+  { name: "Rocket", emoji: "🚀", category: "Toys", packable: true },
 ];
 
 function getMockItemsForTheme(theme: string): MockItem[] {
@@ -103,64 +103,68 @@ export function createItemStream$(props: ItemStreamProps): Observable<GeneratedI
   return from(items).pipe(concatMap((item) => of(item).pipe(delay(50))));
 }
 
-export function simulateInteractions$(items$: Observable<GeneratedItem>, interactionCount?: number): Observable<Interaction> {
+export function simulateInteractions$(items$: Observable<GeneratedItem>): Observable<Interaction> {
   return items$.pipe(
     toArray(),
     switchMap((items) => {
       if (items.length === 0) return from([]);
 
-      const count = interactionCount ?? 5;
       const interactions: Interaction[] = [];
 
-      // Generate interactions, skipping successful (noop) combinations
-      let attempts = 0;
-      const maxAttempts = count * 10; // Avoid infinite loop
+      // Generate ALL possible interactions exhaustively, skipping successful (noop) combinations
+      for (let i = 0; i < items.length; i++) {
+        for (let j = i + 1; j < items.length; j++) {
+          const item1 = items[i];
+          const item2 = items[j];
 
-      while (interactions.length < count && attempts < maxAttempts) {
-        attempts++;
-        const item1 = items[Math.floor(Math.random() * items.length)];
-        const item2 = items[Math.floor(Math.random() * items.length)];
+          // Check if items are packable together based on compatibility rules
+          const item1Packable = isPackable(item1.name);
+          const item2Packable = isPackable(item2.name);
+          const item1Category = getCategory(item1.name);
+          const item2Category = getCategory(item2.name);
 
-        // Check if items are packable together based on compatibility rules
-        const item1Packable = isPackable(item1.name);
-        const item2Packable = isPackable(item2.name);
-        const item1Category = getCategory(item1.name);
-        const item2Category = getCategory(item2.name);
+          // Both items are packable (clothing/shelf-stable food) -> Noop (skip)
+          if (item1Packable && item2Packable) {
+            continue;
+          }
 
-        // Both items are packable (clothing/shelf-stable food) -> Noop (skip)
-        if (item1Packable && item2Packable) {
-          continue;
-        }
+          // Raw meat or fragile perishable with anything -> Death (biological hazard)
+          if (
+            item1Category === "Raw Meat" ||
+            item2Category === "Raw Meat" ||
+            item1Category === "Fragile Perishable" ||
+            item2Category === "Fragile Perishable"
+          ) {
+            interactions.push({
+              itemOneName: item1.name,
+              itemTwoName: item2.name,
+              speechBubbleWord: "Perished!",
+            });
+            continue;
+          }
 
-        // Raw meat or fragile perishable with anything -> Death (biological hazard)
-        if (item1Category === "Raw Meat" || item2Category === "Raw Meat" || item1Category === "Fragile Perishable" || item2Category === "Fragile Perishable") {
+          // Regular perishables with packable items -> Poop (contamination)
+          if ((item1Category === "Perishable" && item2Packable) || (item2Category === "Perishable" && item1Packable)) {
+            interactions.push({
+              itemOneName: item1.name,
+              itemTwoName: item2.name,
+              speechBubbleWord: "Contaminated!",
+            });
+            continue;
+          }
+
+          // Two non-packables together -> Poop (spoilage)
           interactions.push({
             itemOneName: item1.name,
             itemTwoName: item2.name,
-            speechBubbleWord: "Perished!",
+            speechBubbleWord: "Spoiled!",
           });
-          continue;
         }
-
-        // Regular perishables with packable items -> Poop (contamination)
-        if ((item1Category === "Perishable" && item2Packable) || (item2Category === "Perishable" && item1Packable)) {
-          interactions.push({
-            itemOneName: item1.name,
-            itemTwoName: item2.name,
-            speechBubbleWord: "Contaminated!",
-          });
-          continue;
-        }
-
-        // Two non-packables together -> Poop (spoilage)
-        interactions.push({
-          itemOneName: item1.name,
-          itemTwoName: item2.name,
-          speechBubbleWord: "Spoiled!",
-        });
       }
 
-      return from(interactions).pipe(concatMap((interaction) => of(interaction).pipe(delay(100))));
+      console.log("Generated interactions", interactions);
+
+      return from(interactions).pipe(concatMap((interaction) => of(interaction).pipe(delay(10))));
     })
   );
 }
