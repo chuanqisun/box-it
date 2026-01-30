@@ -11,7 +11,6 @@ import type {
   WithName,
   WithPhysical,
   WithPointer,
-  WithQuality,
   WithRender,
   WithScore,
   WithSpawner,
@@ -34,7 +33,6 @@ export type GameEntity = {
     WithItemState &
     WithZone &
     WithBoxAnchor &
-    WithQuality &
     WithPhysical &
     WithConveyor &
     WithBox &

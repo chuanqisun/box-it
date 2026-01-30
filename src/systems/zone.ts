@@ -71,14 +71,7 @@ function shipBox(world: GameWorld): void {
   // Play shipped sound
   playSound("shipped");
 
-  let boxValue = 0;
-  packed.forEach((entity) => {
-    if (entity.quality && !entity.quality.isBad) {
-      boxValue += 100;
-    } else {
-      boxValue -= 10;
-    }
-  });
+  let boxValue = packed.length * 100;
 
   const newFeedback = {
     text: `SHIPPED! +$${boxValue}`,

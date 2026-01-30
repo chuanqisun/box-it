@@ -156,8 +156,7 @@ export function createPackedItemEntity(
   rotation: number,
   emoji: string,
   name: string,
-  fallScale: number,
-  isBad: boolean
+  fallScale: number
 ): EntityData {
   return {
     transform: { x: relX, y: relY, rotation, scale: 0 },
@@ -166,7 +165,6 @@ export function createPackedItemEntity(
     collision: { width: ITEM_SIZE, height: ITEM_SIZE, type: "rectangle" },
     boxAnchor: { relX, relY },
     itemState: { state: "packed", fallScale },
-    quality: { isBad },
     physical: { size: ITEM_SIZE },
   };
 }

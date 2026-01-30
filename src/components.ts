@@ -110,12 +110,6 @@ export interface WithBoxAnchor {
   };
 }
 
-export interface WithQuality {
-  quality: {
-    isBad: boolean;
-  };
-}
-
 export interface WithPhysical {
   physical: {
     size: number;

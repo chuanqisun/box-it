@@ -91,7 +91,6 @@ export const boxPackingSystem: System<GameEntity, GameGlobal> = (world, _deltaTi
       collision: { width: ITEM_SIZE, height: ITEM_SIZE, type: "rectangle" },
       boxAnchor: { relX, relY },
       itemState: { state: "packed", fallScale: item.itemState.fallScale },
-      quality: { isBad: overlap },
       physical: { size: ITEM_SIZE },
     });
 

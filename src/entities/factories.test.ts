@@ -208,25 +208,18 @@ describe("Entity Factories", () => {
 
   describe("createPackedItemEntity", () => {
     it("should create packed item at relative position", () => {
-      const entity = createPackedItemEntity(50, 60, 0.5, "🎁", "gift", 0.8, false);
+      const entity = createPackedItemEntity(50, 60, 0.5, "🎁", "gift", 0.8);
       expect(entity.boxAnchor!.relX).toBe(50);
       expect(entity.boxAnchor!.relY).toBe(60);
     });
 
-    it("should set quality based on isBad", () => {
-      const good = createPackedItemEntity(0, 0, 0, "🎁", "gift", 1, false);
-      const bad = createPackedItemEntity(0, 0, 0, "💀", "skull", 1, true);
-      expect(good.quality!.isBad).toBe(false);
-      expect(bad.quality!.isBad).toBe(true);
-    });
-
     it("should start in packed state", () => {
-      const entity = createPackedItemEntity(0, 0, 0, "📦", "box", 1, false);
+      const entity = createPackedItemEntity(0, 0, 0, "📦", "box", 1);
       expect(entity.itemState!.state).toBe("packed");
     });
 
     it("should start at scale 0 for animation", () => {
-      const entity = createPackedItemEntity(0, 0, 0, "📦", "box", 1, false);
+      const entity = createPackedItemEntity(0, 0, 0, "📦", "box", 1);
       expect(entity.transform!.scale).toBe(0);
     });
   });
