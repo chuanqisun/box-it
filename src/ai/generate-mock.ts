@@ -1,7 +1,7 @@
 import { Observable, concatMap, delay, from, of, switchMap, toArray } from "rxjs";
 import type { GeneratedItem, Interaction, ItemStreamProps } from "./generate";
 
-type ItemCategory = "fruit" | "protein" | "clothing" | "other" | undefined;
+type ItemCategory = "vegetable" | "protein" | "clothing" | "other" | undefined;
 
 interface MockItem {
   name: string;
@@ -27,13 +27,13 @@ const THEME_MOCK_ITEMS: Record<string, MockItem[]> = {
     { name: "Handbag", emoji: "👜", category: "other" },
   ],
   "Disaster Relief Donation": [
-    // --- FRUIT ---
-    { name: "Bunch of Grapes", emoji: "🍇", category: "fruit" },
-    { name: "Vine-Ripened Tomato", emoji: "🍅", category: "fruit" },
-    { name: "Kiwi", emoji: "🥝", category: "fruit" },
-    { name: "Whole Pineapple", emoji: "🍍", category: "fruit" },
-    { name: "Ear of Corn", emoji: "🌽", category: "other" },
-    { name: "Russet Potato", emoji: "🥔", category: "other" },
+    // --- VEGETABLE ---
+    { name: "Bunch of Grapes", emoji: "🍇", category: "vegetable" },
+    { name: "Vine-Ripened Tomato", emoji: "🍅", category: "vegetable" },
+    { name: "Kiwi", emoji: "🥝", category: "vegetable" },
+    { name: "Whole Pineapple", emoji: "🍍", category: "vegetable" },
+    { name: "Ear of Corn", emoji: "🌽", category: "vegetable" },
+    { name: "Russet Potato", emoji: "🥔", category: "vegetable" },
 
     // --- PROTEIN ---
     { name: "Strips of Bacon", emoji: "🥓", category: "protein" },
@@ -73,10 +73,10 @@ const THEME_MOCK_ITEMS: Record<string, MockItem[]> = {
 };
 
 const DEFAULT_MOCK_ITEMS: MockItem[] = [
-  { name: "Apple", emoji: "🍎", category: "fruit" },
-  { name: "Banana", emoji: "🍌", category: "fruit" },
-  { name: "Cherry", emoji: "🍒", category: "fruit" },
-  { name: "Avocado", emoji: "🥑", category: "fruit" },
+  { name: "Apple", emoji: "🍎", category: "vegetable" },
+  { name: "Banana", emoji: "🍌", category: "vegetable" },
+  { name: "Cherry", emoji: "🍒", category: "vegetable" },
+  { name: "Avocado", emoji: "🥑", category: "vegetable" },
   { name: "Burger", emoji: "🍔", category: "protein" },
   { name: "Steak", emoji: "🥩", category: "protein" },
   { name: "Chicken", emoji: "🍗", category: "protein" },
@@ -152,8 +152,8 @@ export function simulateInteractions$(items$: Observable<GeneratedItem>): Observ
             continue;
           }
 
-          // Fruit + anything else -> Spoiled!
-          if (category1 === "fruit" || category2 === "fruit") {
+          // Vegetable + anything else -> Spoiled!
+          if (category1 === "vegetable" || category2 === "vegetable") {
             interactions.push({
               itemOneName: item1.name,
               itemTwoName: item2.name,
