@@ -1,19 +1,8 @@
 import { fromEvent, merge, Observable } from "rxjs";
-import { calculateSortedSides, getCanonicalRotation, getCentroid, normalizeAngle } from "./geometry";
+import { calculateSortedSides, getCanonicalRotation, getCentroid } from "./geometry";
 
-// ============================================================
-// CONFIGURATION - Tuned for fast, robust tracking
-// ============================================================
-const TRACKING_CONFIG = {
-  /** Position smoothing alpha (0-1, higher = faster response, more jitter) */
-  positionAlpha: 0.5,
-  /** Orientation smoothing alpha (0-1, higher = faster response, more jitter) */
-  orientationAlpha: 0.35,
-  /** Orientation deadband in degrees - ignore changes smaller than this */
-  orientationDeadbandDeg: 3,
-  /** Maximum relative error for signature matching (15% tolerance) */
-  maxRelativeError: 0.15,
-};
+/** Maximum relative error for signature matching (15% tolerance) */
+const MAX_RELATIVE_ERROR = 0.15;
 
 export function getInputRawEvent$(targetArea: HTMLElement): Observable<TouchEvent> {
   // Use { passive: false } to ensure events are handled immediately without browser buffering.
@@ -72,13 +61,7 @@ interface TrackedObjectState {
   signature: [number, number, number];
   boundingBox?: KnownObject["boundingBox"];
   isActive: boolean;
-  /** Raw position from touch points */
-  rawPosition?: { x: number; y: number };
-  /** Smoothed position for output */
   position?: { x: number; y: number };
-  /** Raw rotation from touch points */
-  rawRotation?: number;
-  /** Smoothed rotation for output */
   rotation?: number;
   /** Touch IDs used by this object (for track continuity) */
   touchIds?: Set<number>;
@@ -176,18 +159,12 @@ function detectObjects(touches: TouchPoint[], objectStates: Map<string, TrackedO
     const state = objectStates.get(match.stateId)!;
     matchedStateIds.add(match.stateId);
 
-    const rawPosition = getCentroid(match.points);
-    const rawRotation = getCanonicalRotation(match.points, state.rotation);
+    const position = getCentroid(match.points);
+    const rotation = getCanonicalRotation(match.points, state.rotation);
     const type = state.isActive ? "move" : "down";
 
-    // Apply smoothing
-    const position = smoothPosition(rawPosition, state.position, state.isActive);
-    const rotation = smoothRotation(rawRotation, state.rotation, state.isActive);
-
     // Update state
-    state.rawPosition = rawPosition;
     state.position = position;
-    state.rawRotation = rawRotation;
     state.rotation = rotation;
     state.isActive = true;
     state.touchIds = new Set(match.points.map((p) => p.id));
@@ -223,48 +200,6 @@ function detectObjects(touches: TouchPoint[], objectStates: Map<string, TrackedO
   return updates;
 }
 
-/** Linear interpolation */
-function lerp(a: number, b: number, alpha: number): number {
-  return a + (b - a) * alpha;
-}
-
-/** Smooth position using exponential moving average */
-function smoothPosition(
-  rawPos: { x: number; y: number },
-  prevPos: { x: number; y: number } | undefined,
-  wasActive: boolean
-): { x: number; y: number } {
-  if (!prevPos || !wasActive) {
-    return rawPos; // First frame - no smoothing
-  }
-  return {
-    x: lerp(prevPos.x, rawPos.x, TRACKING_CONFIG.positionAlpha),
-    y: lerp(prevPos.y, rawPos.y, TRACKING_CONFIG.positionAlpha),
-  };
-}
-
-/** Smooth rotation with deadband to prevent jitter */
-function smoothRotation(rawRot: number, prevRot: number | undefined, wasActive: boolean): number {
-  if (prevRot === undefined || !wasActive) {
-    return rawRot; // First frame - no smoothing
-  }
-
-  // Calculate angle difference (handling wraparound)
-  let delta = rawRot - prevRot;
-  // Normalize to [-π, π]
-  while (delta > Math.PI) delta -= 2 * Math.PI;
-  while (delta < -Math.PI) delta += 2 * Math.PI;
-
-  // Apply deadband - ignore small changes
-  const deadbandRad = (TRACKING_CONFIG.orientationDeadbandDeg * Math.PI) / 180;
-  if (Math.abs(delta) < deadbandRad) {
-    return prevRot; // Stay at previous rotation
-  }
-
-  // Apply smoothing
-  return normalizeAngle(prevRot + delta * TRACKING_CONFIG.orientationAlpha);
-}
-
 /**
  * Generate all 3-point combinations from touch points
  */
@@ -295,9 +230,6 @@ function getRelativeError(points: TouchPoint[], signature: [number, number, numb
   return totalError / signatureSum;
 }
 
-/** Maximum allowed relative error (as a fraction of total signature length) */
-const MAX_RELATIVE_ERROR = 0.15; // 15% tolerance
-
 /**
  * Find the best non-overlapping matches between combinations and objects.
  * Uses a greedy approach with track continuity bonus:
@@ -322,7 +254,7 @@ function findBestMatches(
   for (const [stateId, state] of objectStates) {
     for (const combo of combinations) {
       const error = getRelativeError(combo, state.signature);
-      if (error <= TRACKING_CONFIG.maxRelativeError) {
+      if (error <= MAX_RELATIVE_ERROR) {
         const comboTouchIds = new Set(combo.map((p) => p.id));
 
         // Count how many touch IDs are shared with the previous frame
