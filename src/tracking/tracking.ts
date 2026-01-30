@@ -1,7 +1,21 @@
-import { get } from "idb-keyval";
+import { get, set } from "idb-keyval";
 import { CALIBRATION_OBJECT_IDS, CalibrationElement, DEFAULT_CALIBRATION_PRESETS, type ObjectSignature } from "./calibration-element";
 import "./calibration-element.css";
 import { getInputRawEvent$, getObjectEvents, type ObjectUpdate } from "./input";
+
+const TOOL_ENABLED_KEY = "enabled-tools";
+
+/** Get the set of enabled tool IDs from IndexedDB */
+export async function getEnabledTools(): Promise<Set<string>> {
+  const stored = await get<string[]>(TOOL_ENABLED_KEY);
+  // Default: all tools enabled
+  return new Set(stored ?? CALIBRATION_OBJECT_IDS);
+}
+
+/** Save enabled tools to IndexedDB */
+export async function setEnabledTools(enabledIds: string[]): Promise<void> {
+  await set(TOOL_ENABLED_KEY, enabledIds);
+}
 
 const OBJECT_DISPLAY_NAMES: Record<string, string> = {
   box: "box",
@@ -32,10 +46,21 @@ function getDefaultSignature(id: string): ObjectSignature | null {
 }
 
 export async function loadCalibratedObjects(container: HTMLElement, onCalibrate: (objectId: string) => void) {
+  const enabledTools = await getEnabledTools();
+
   const items = await Promise.all(
     CALIBRATION_OBJECT_IDS.map(async (id) => {
       const signature = await get<ObjectSignature>(`object-signature-${id}`);
       const displayName = getObjectDisplayName(id);
+      const isTool = id !== "box";
+      const isEnabled = !isTool || enabledTools.has(id);
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "calibrated-object-wrapper";
+      if (!isEnabled) {
+        wrapper.classList.add("disabled");
+      }
+
       const item = document.createElement("div");
       item.className = "calibrated-object-item clickable";
       item.dataset.objectId = id;
@@ -58,10 +83,38 @@ export async function loadCalibratedObjects(container: HTMLElement, onCalibrate:
         item.classList.add("not-calibrated");
       }
 
-      // Add click handler for individual calibration
-      item.addEventListener("click", () => onCalibrate(id));
+      wrapper.appendChild(item);
 
-      return item;
+      // Add toggle for tools (not box)
+      if (isTool) {
+        const toggle = document.createElement("label");
+        toggle.className = "tool-toggle";
+        toggle.innerHTML = `<input type="checkbox" class="tool-enable-checkbox" data-tool-id="${id}" ${isEnabled ? "checked" : ""} /><span class="toggle-slider"></span>`;
+        toggle.title = "Enable/disable this tool";
+        wrapper.appendChild(toggle);
+
+        const checkbox = toggle.querySelector(".tool-enable-checkbox") as HTMLInputElement;
+        checkbox.addEventListener("change", async () => {
+          const currentEnabled = await getEnabledTools();
+          if (checkbox.checked) {
+            currentEnabled.add(id);
+            wrapper.classList.remove("disabled");
+          } else {
+            currentEnabled.delete(id);
+            wrapper.classList.add("disabled");
+          }
+          await setEnabledTools(Array.from(currentEnabled));
+        });
+      }
+
+      // Add click handler for individual calibration (only if enabled)
+      item.addEventListener("click", () => {
+        if (isEnabled || wrapper.querySelector<HTMLInputElement>(".tool-enable-checkbox")?.checked) {
+          onCalibrate(id);
+        }
+      });
+
+      return wrapper;
     })
   );
 
@@ -128,8 +181,11 @@ export async function initObjectTracking(
   ) => void
 ) {
   try {
+    const enabledTools = await getEnabledTools();
+    const toolIds = ["box", "tool1", "tool2", "tool3"].filter((id) => enabledTools.has(id));
+
     const signatures = await Promise.all(
-      ["box", "tool1", "tool2", "tool3"].map(async (id) => ({
+      toolIds.map(async (id) => ({
         id,
         signature: await get<ObjectSignature>(`object-signature-${id}`),
       }))

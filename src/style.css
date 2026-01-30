@@ -348,6 +348,71 @@ canvas {
   color: #44ff44;
 }
 
+/* Calibrated Object Wrapper with Toggle */
+.calibrated-object-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.calibrated-object-wrapper .calibrated-object-item {
+  flex: 1;
+}
+
+.calibrated-object-wrapper.disabled .calibrated-object-item {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Tool Toggle Switch */
+.tool-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.tool-toggle .tool-enable-checkbox {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.tool-toggle .toggle-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #444;
+  border-radius: 24px;
+  transition: background-color 0.2s ease;
+}
+
+.tool-toggle .toggle-slider::before {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #888;
+  border-radius: 50%;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.tool-toggle .tool-enable-checkbox:checked + .toggle-slider {
+  background-color: rgba(241, 196, 15, 0.3);
+}
+
+.tool-toggle .tool-enable-checkbox:checked + .toggle-slider::before {
+  transform: translateX(20px);
+  background-color: #f1c40f;
+}
+
 .calibrated-object-item.not-calibrated .object-sides {
   color: #888;
   font-style: italic;
