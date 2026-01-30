@@ -1,89 +1,92 @@
 import { Observable, concatMap, delay, from, of, switchMap, toArray } from "rxjs";
 import type { GeneratedItem, Interaction, ItemStreamProps } from "./generate";
 
+type ItemCategory = "fruit" | "protein" | "clothing" | "other" | undefined;
+
 interface MockItem {
   name: string;
   emoji: string;
-  category?: string;
-  packable?: boolean;
+  category?: ItemCategory;
 }
 
 const THEME_MOCK_ITEMS: Record<string, MockItem[]> = {
   "Black Friday Sale": [
-    { name: "TV", emoji: "📺", category: "Electronics", packable: true },
-    { name: "Laptop", emoji: "💻", category: "Electronics", packable: true },
-    { name: "Headphones", emoji: "🎧", category: "Electronics", packable: true },
-    { name: "Smartphone", emoji: "📱", category: "Electronics", packable: true },
-    { name: "Gaming Console", emoji: "🎮", category: "Electronics", packable: true },
-    { name: "Sneakers", emoji: "👟", category: "Clothing", packable: true },
-    { name: "Watch", emoji: "⌚", category: "Accessories", packable: true },
-    { name: "Camera", emoji: "📷", category: "Electronics", packable: true },
-    { name: "Tablet", emoji: "📲", category: "Electronics", packable: true },
-    { name: "Blender", emoji: "🧊", category: "Appliances", packable: true },
-    { name: "Coffee Maker", emoji: "☕", category: "Appliances", packable: true },
-    { name: "Vacuum", emoji: "🧹", category: "Appliances", packable: true },
-    { name: "Jacket", emoji: "🧥", category: "Clothing", packable: true },
-    { name: "Handbag", emoji: "👜", category: "Accessories", packable: true },
+    { name: "TV", emoji: "📺", category: "other" },
+    { name: "Laptop", emoji: "💻", category: "other" },
+    { name: "Headphones", emoji: "🎧", category: "other" },
+    { name: "Smartphone", emoji: "📱", category: "other" },
+    { name: "Gaming Console", emoji: "🎮", category: "other" },
+    { name: "Sneakers", emoji: "👟", category: "clothing" },
+    { name: "Watch", emoji: "⌚", category: "other" },
+    { name: "Camera", emoji: "📷", category: "other" },
+    { name: "Tablet", emoji: "📲", category: "other" },
+    { name: "Blender", emoji: "🧊", category: "other" },
+    { name: "Coffee Maker", emoji: "☕", category: "other" },
+    { name: "Vacuum", emoji: "🧹", category: "other" },
+    { name: "Jacket", emoji: "🧥", category: "clothing" },
+    { name: "Handbag", emoji: "👜", category: "other" },
   ],
   "Disaster Relief Donation": [
-    // --- PERISHABLES: RAW/WET (Incompatible with dry containers) ---
-    { name: "Bunch of Grapes", emoji: "🍇", category: "Perishable", packable: false },
-    { name: "Vine-Ripened Tomato", emoji: "🍅", category: "Perishable", packable: false },
-    { name: "Kiwi", emoji: "🥝", category: "Perishable", packable: false },
-    { name: "Whole Pineapple", emoji: "🍍", category: "Perishable", packable: false },
-    { name: "Ear of Corn", emoji: "🌽", category: "Perishable", packable: false },
-    { name: "Russet Potato", emoji: "🥔", category: "Perishable", packable: false },
-    { name: "Strips of Bacon", emoji: "🥓", category: "Raw Meat", packable: false },
-    { name: "Raw Beef", emoji: "🥩", category: "Raw Meat", packable: false },
-    { name: "Raw Egg", emoji: "🥚", category: "Fragile Perishable", packable: false },
+    // --- FRUIT ---
+    { name: "Bunch of Grapes", emoji: "🍇", category: "fruit" },
+    { name: "Vine-Ripened Tomato", emoji: "🍅", category: "fruit" },
+    { name: "Kiwi", emoji: "🥝", category: "fruit" },
+    { name: "Whole Pineapple", emoji: "🍍", category: "fruit" },
+    { name: "Ear of Corn", emoji: "🌽", category: "other" },
+    { name: "Russet Potato", emoji: "🥔", category: "other" },
 
-    // --- DRY GOODS: CLOTHING (Washable) ---
-    { name: "Short-Sleeved Cotton Shirt", emoji: "👕", category: "Clothing", packable: true },
-    { name: "Denim Jeans", emoji: "👖", category: "Clothing", packable: true },
-    { name: "Bikini Set", emoji: "👙", category: "Clothing", packable: true },
-    { name: "Heavy Duty Overcoat", emoji: "🧥", category: "Clothing", packable: true },
-    { name: "Women's Tunic", emoji: "👚", category: "Clothing", packable: true },
-    { name: "Woolen Socks", emoji: "🧦", category: "Clothing", packable: true },
-    { name: "Insulated Gloves", emoji: "🧤", category: "Clothing", packable: true },
-    { name: "Winter Scarf", emoji: "🧣", category: "Clothing", packable: true },
-    { name: "Briefs", emoji: "🩲", category: "Clothing", packable: true },
+    // --- PROTEIN ---
+    { name: "Strips of Bacon", emoji: "🥓", category: "protein" },
+    { name: "Raw Beef", emoji: "🥩", category: "protein" },
+    { name: "Raw Egg", emoji: "🥚", category: "protein" },
 
-    // --- DRY GOODS: SHELF-STABLE FOOD ---
-    { name: "Chocolate Bar", emoji: "🍫", category: "Food", packable: true },
+    // --- CLOTHING ---
+    { name: "Short-Sleeved Cotton Shirt", emoji: "👕", category: "clothing" },
+    { name: "Denim Jeans", emoji: "👖", category: "clothing" },
+    { name: "Bikini Set", emoji: "👙", category: "clothing" },
+    { name: "Heavy Duty Overcoat", emoji: "🧥", category: "clothing" },
+    { name: "Women's Tunic", emoji: "👚", category: "clothing" },
+    { name: "Woolen Socks", emoji: "🧦", category: "clothing" },
+    { name: "Insulated Gloves", emoji: "🧤", category: "clothing" },
+    { name: "Winter Scarf", emoji: "🧣", category: "clothing" },
+    { name: "Briefs", emoji: "🩲", category: "clothing" },
+
+    // --- OTHER ---
+    { name: "Chocolate Bar", emoji: "🍫", category: "other" },
   ],
   "Back to School": [
-    { name: "Backpack", emoji: "🎒", category: "Accessories", packable: true },
-    { name: "Notebook", emoji: "📓", category: "School Supplies", packable: true },
-    { name: "Pencils", emoji: "✏️", category: "School Supplies", packable: true },
-    { name: "Calculator", emoji: "🖩", category: "Electronics", packable: true },
-    { name: "Scissors", emoji: "✂️", category: "School Supplies", packable: true },
-    { name: "Ruler", emoji: "📏", category: "School Supplies", packable: true },
-    { name: "Glue", emoji: "📎", category: "School Supplies", packable: true },
-    { name: "Lunchbox", emoji: "🍱", category: "Accessories", packable: true },
-    { name: "Crayons", emoji: "🖍️", category: "School Supplies", packable: true },
-    { name: "Textbook", emoji: "📚", category: "School Supplies", packable: true },
-    { name: "Eraser", emoji: "🧽", category: "School Supplies", packable: true },
-    { name: "Highlighter", emoji: "🖊️", category: "School Supplies", packable: true },
-    { name: "Folder", emoji: "📂", category: "School Supplies", packable: true },
-    { name: "Markers", emoji: "🖌️", category: "School Supplies", packable: true },
+    { name: "Backpack", emoji: "🎒", category: "other" },
+    { name: "Notebook", emoji: "📓", category: "other" },
+    { name: "Pencils", emoji: "✏️", category: "other" },
+    { name: "Calculator", emoji: "🖩", category: "other" },
+    { name: "Scissors", emoji: "✂️", category: "other" },
+    { name: "Ruler", emoji: "📏", category: "other" },
+    { name: "Glue", emoji: "📎", category: "other" },
+    { name: "Lunchbox", emoji: "🍱", category: "other" },
+    { name: "Crayons", emoji: "🖍️", category: "other" },
+    { name: "Textbook", emoji: "📚", category: "other" },
+    { name: "Eraser", emoji: "🧽", category: "other" },
+    { name: "Highlighter", emoji: "🖊️", category: "other" },
+    { name: "Folder", emoji: "📂", category: "other" },
+    { name: "Markers", emoji: "🖌️", category: "other" },
   ],
 };
 
 const DEFAULT_MOCK_ITEMS: MockItem[] = [
-  { name: "Apple", emoji: "🍎", category: "Perishable", packable: false },
-  { name: "Banana", emoji: "🍌", category: "Perishable", packable: false },
-  { name: "Cherry", emoji: "🍒", category: "Perishable", packable: false },
-  { name: "Avocado", emoji: "🥑", category: "Perishable", packable: false },
-  { name: "Burger", emoji: "🍔", category: "Perishable", packable: false },
-  { name: "Pizza", emoji: "🍕", category: "Perishable", packable: false },
-  { name: "Ice Cream", emoji: "🍦", category: "Perishable", packable: false },
-  { name: "Donut", emoji: "🍩", category: "Perishable", packable: false },
-  { name: "Cookie", emoji: "🍪", category: "Food", packable: true },
-  { name: "Beer", emoji: "🍺", category: "Beverage", packable: true },
-  { name: "Basketball", emoji: "🏀", category: "Sports", packable: true },
-  { name: "Soccer Ball", emoji: "⚽", category: "Sports", packable: true },
-  { name: "Car", emoji: "🚗", category: "Toys", packable: true },
-  { name: "Rocket", emoji: "🚀", category: "Toys", packable: true },
+  { name: "Apple", emoji: "🍎", category: "fruit" },
+  { name: "Banana", emoji: "🍌", category: "fruit" },
+  { name: "Cherry", emoji: "🍒", category: "fruit" },
+  { name: "Avocado", emoji: "🥑", category: "fruit" },
+  { name: "Burger", emoji: "🍔", category: "protein" },
+  { name: "Steak", emoji: "🥩", category: "protein" },
+  { name: "Chicken", emoji: "🍗", category: "protein" },
+  { name: "T-Shirt", emoji: "👕", category: "clothing" },
+  { name: "Pants", emoji: "👖", category: "clothing" },
+  { name: "Cookie", emoji: "🍪", category: "other" },
+  { name: "Basketball", emoji: "🏀", category: "other" },
+  { name: "Soccer Ball", emoji: "⚽", category: "other" },
+  { name: "Car", emoji: "🚗", category: "other" },
+  { name: "Rocket", emoji: "🚀", category: "other" },
 ];
 
 function getMockItemsForTheme(theme: string): MockItem[] {
@@ -122,36 +125,44 @@ export function simulateInteractions$(items$: Observable<GeneratedItem>): Observ
 
       const interactions: Interaction[] = [];
 
-      // Generate ALL possible interactions exhaustively, skipping successful (noop) combinations
+      // Generate interactions based on category rules:
+      // - Same category: no problem (skip)
+      // - Protein + anything else: Contaminated!
+      // - Fruit + anything else: Spoiled!
       for (let i = 0; i < items.length; i++) {
         for (let j = i + 1; j < items.length; j++) {
           const item1 = items[i];
           const item2 = items[j];
 
-          const item1Packable = isPackable(item1.name);
-          const item2Packable = isPackable(item2.name);
+          const category1 = getItemCategory(item1.name);
+          const category2 = getItemCategory(item2.name);
 
-          // Both items are packable -> Noop (skip)
-          if (item1Packable && item2Packable) {
+          // Same category -> no problem (skip)
+          if (category1 === category2) {
             continue;
           }
 
-          // Both non-packable -> random Perished or Spoiled
-          if (!item1Packable && !item2Packable) {
+          // Protein + anything else -> Contaminated!
+          if (category1 === "protein" || category2 === "protein") {
             interactions.push({
               itemOneName: item1.name,
               itemTwoName: item2.name,
-              speechBubbleWord: Math.random() < 0.5 ? "Perished!" : "Spoiled!",
+              speechBubbleWord: "Contaminated!",
             });
             continue;
           }
 
-          // One non-packable with one packable -> Contaminated
-          interactions.push({
-            itemOneName: item1.name,
-            itemTwoName: item2.name,
-            speechBubbleWord: "Contaminated!",
-          });
+          // Fruit + anything else -> Spoiled!
+          if (category1 === "fruit" || category2 === "fruit") {
+            interactions.push({
+              itemOneName: item1.name,
+              itemTwoName: item2.name,
+              speechBubbleWord: "Spoiled!",
+            });
+            continue;
+          }
+
+          // Other combinations (clothing + other, etc.) -> no problem (skip)
         }
       }
 
@@ -162,14 +173,14 @@ export function simulateInteractions$(items$: Observable<GeneratedItem>): Observ
   );
 }
 
-// Helper function to check if item is packable
-function isPackable(itemName: string): boolean {
+// Helper function to get item category
+function getItemCategory(itemName: string): ItemCategory {
   for (const items of Object.values(THEME_MOCK_ITEMS)) {
     const item = items.find((i) => i.name === itemName);
-    if (item) return item.packable ?? true;
+    if (item) return item.category;
   }
   // Check DEFAULT_MOCK_ITEMS as well
   const defaultItem = DEFAULT_MOCK_ITEMS.find((i) => i.name === itemName);
-  if (defaultItem) return defaultItem.packable ?? true;
-  return true;
+  if (defaultItem) return defaultItem.category;
+  return undefined;
 }
