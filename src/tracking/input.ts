@@ -1,5 +1,19 @@
 import { fromEvent, merge, Observable } from "rxjs";
-import { calculateSortedSides, getCanonicalRotation, getCentroid } from "./geometry";
+import { calculateSortedSides, getCanonicalRotation, getCentroid, normalizeAngle } from "./geometry";
+
+// ============================================================
+// CONFIGURATION - Tuned for fast, robust tracking
+// ============================================================
+const TRACKING_CONFIG = {
+  /** Position smoothing alpha (0-1, higher = faster response, more jitter) */
+  positionAlpha: 0.5,
+  /** Orientation smoothing alpha (0-1, higher = faster response, more jitter) */
+  orientationAlpha: 0.35,
+  /** Orientation deadband in degrees - ignore changes smaller than this */
+  orientationDeadbandDeg: 3,
+  /** Maximum relative error for signature matching (15% tolerance) */
+  maxRelativeError: 0.15,
+};
 
 export function getInputRawEvent$(targetArea: HTMLElement): Observable<TouchEvent> {
   // Use { passive: false } to ensure events are handled immediately without browser buffering.
@@ -58,8 +72,16 @@ interface TrackedObjectState {
   signature: [number, number, number];
   boundingBox?: KnownObject["boundingBox"];
   isActive: boolean;
+  /** Raw position from touch points */
+  rawPosition?: { x: number; y: number };
+  /** Smoothed position for output */
   position?: { x: number; y: number };
+  /** Raw rotation from touch points */
+  rawRotation?: number;
+  /** Smoothed rotation for output */
   rotation?: number;
+  /** Touch IDs used by this object (for track continuity) */
+  touchIds?: Set<number>;
 }
 
 export function getObjectEvents(rawEvents$: Observable<TouchEvent>, context: ObjectTrackingContext, targetElement: HTMLElement): Observable<ObjectUpdate> {
