@@ -393,6 +393,8 @@ export const toolSystem: System<GameEntity, GameGlobal> = (world, _deltaTime) =>
 
   for (const tool of tools) {
     if (!tool.tool || !tool.transform || !tool.collision) continue;
+    // Skip inactive tools (not currently being touched)
+    if (!tool.tool.isActive) continue;
 
     const toolWidth = tool.collision.width;
     const toolHeight = tool.collision.height;
