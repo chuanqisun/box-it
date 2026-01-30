@@ -59,7 +59,6 @@ export const spawningSystem: System<GameEntity, GameGlobal> = (world, deltaTime)
                         {
                           itemOne: interaction.itemOneName,
                           itemTwo: interaction.itemTwoName,
-                          result: interaction.resultEmoji,
                           effect: interaction.speechBubbleWord,
                         },
                       ],

@@ -26,7 +26,7 @@ export const interactionSystem: System<GameEntity, GameGlobal> = (world, _deltaT
         text: rule.effect,
         x: box.transform.x + box.collision.width / 2,
         y: box.transform.y,
-        color: "#66ff66",
+        color: "#ff6666",
         size: 40,
         life: 1.5,
         velocityY: -1.2,
@@ -43,17 +43,12 @@ export const interactionSystem: System<GameEntity, GameGlobal> = (world, _deltaT
               },
             };
           }
-          if (e.id === first.id) {
-            return {
-              ...e,
-              render: { ...e.render!, emoji: rule.result },
-              name: { value: rule.result },
-            };
-          }
           return e;
         })
       );
 
+      // Remove both items since the interaction failed
+      world.removeEntity(first.id);
       world.removeEntity(second.id);
       return world;
     }

@@ -86,8 +86,8 @@ export function createItemStream$(props: ItemStreamProps): Observable<GeneratedI
 export interface Interaction {
   itemOneName: string;
   itemTwoName: string;
-  resultName: string;
-  resultEmoji: string;
+  resultName?: string;
+  resultEmoji?: string;
   /* Dramatic Onomatopoeia such as "Boom" and Ideophones such as "Yum" */
   speechBubbleWord: string;
 }

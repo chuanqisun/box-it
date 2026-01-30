@@ -78,7 +78,7 @@ export interface WithSpawner {
 export interface InteractionRule {
   itemOne: string;
   itemTwo: string;
-  result: string;
+  result?: string;
   effect: string;
 }
 

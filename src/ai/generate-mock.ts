@@ -4,6 +4,8 @@ import type { GeneratedItem, Interaction, ItemStreamProps } from "./generate";
 interface MockItem {
   name: string;
   emoji: string;
+  category?: string;
+  packable?: boolean;
 }
 
 const THEME_MOCK_ITEMS: Record<string, MockItem[]> = {
@@ -24,20 +26,30 @@ const THEME_MOCK_ITEMS: Record<string, MockItem[]> = {
     { name: "Handbag", emoji: "👜" },
   ],
   "Disaster Relief Donation": [
-    { name: "Water Bottles", emoji: "🧴" },
-    { name: "Canned Food", emoji: "🥫" },
-    { name: "First Aid Kit", emoji: "🩹" },
-    { name: "Blanket", emoji: "🛏️" },
-    { name: "Flashlight", emoji: "🔦" },
-    { name: "Batteries", emoji: "🔋" },
-    { name: "Medicine", emoji: "💊" },
-    { name: "Diapers", emoji: "🧷" },
-    { name: "Hygiene Kit", emoji: "🧼" },
-    { name: "Tent", emoji: "⛺" },
-    { name: "Sleeping Bag", emoji: "🛌" },
-    { name: "Radio", emoji: "📻" },
-    { name: "Clothes", emoji: "👕" },
-    { name: "Baby Formula", emoji: "🍼" },
+    // --- DRY GOODS: CLOTHING (Washable) ---
+    { name: "Short-Sleeved Cotton Shirt", emoji: "👕", category: "Clothing", packable: true },
+    { name: "Denim Jeans", emoji: "👖", category: "Clothing", packable: true },
+    { name: "Bikini Set", emoji: "👙", category: "Clothing", packable: true },
+    { name: "Heavy Duty Overcoat", emoji: "🧥", category: "Clothing", packable: true },
+    { name: "Women's Tunic", emoji: "👚", category: "Clothing", packable: true },
+    { name: "Woolen Socks", emoji: "🧦", category: "Clothing", packable: true },
+    { name: "Insulated Gloves", emoji: "🧤", category: "Clothing", packable: true },
+    { name: "Winter Scarf", emoji: "🧣", category: "Clothing", packable: true },
+    { name: "Briefs", emoji: "🩲", category: "Clothing", packable: true },
+
+    // --- DRY GOODS: SHELF-STABLE FOOD ---
+    { name: "Chocolate Bar", emoji: "🍫", category: "Food", packable: true },
+
+    // --- PERISHABLES: RAW/WET (Incompatible with dry containers) ---
+    { name: "Bunch of Grapes", emoji: "🍇", category: "Perishable", packable: false },
+    { name: "Vine-Ripened Tomato", emoji: "🍅", category: "Perishable", packable: false },
+    { name: "Kiwi", emoji: "🥝", category: "Perishable", packable: false },
+    { name: "Whole Pineapple", emoji: "🍍", category: "Perishable", packable: false },
+    { name: "Ear of Corn", emoji: "🌽", category: "Perishable", packable: false },
+    { name: "Russet Potato", emoji: "🥔", category: "Perishable", packable: false },
+    { name: "Strips of Bacon", emoji: "🥓", category: "Raw Meat", packable: false },
+    { name: "Raw Beef", emoji: "🥩", category: "Raw Meat", packable: false },
+    { name: "Raw Egg", emoji: "🥚", category: "Fragile Perishable", packable: false },
   ],
   "Back to School": [
     { name: "Backpack", emoji: "🎒" },
@@ -98,39 +110,74 @@ export function simulateInteractions$(items$: Observable<GeneratedItem>, interac
       if (items.length === 0) return from([]);
 
       const count = interactionCount ?? 5;
-      const interactions: Interaction[] = Array.from({ length: count }, () => {
+      const interactions: Interaction[] = [];
+
+      // Generate interactions, skipping successful (noop) combinations
+      let attempts = 0;
+      const maxAttempts = count * 10; // Avoid infinite loop
+
+      while (interactions.length < count && attempts < maxAttempts) {
+        attempts++;
         const item1 = items[Math.floor(Math.random() * items.length)];
         const item2 = items[Math.floor(Math.random() * items.length)];
 
-        const roll = Math.random();
-        if (roll < 0.3) {
-          return {
-            itemOneName: item1.name,
-            itemTwoName: item2.name,
-            resultName: "Poop",
-            resultEmoji: "💩",
-            speechBubbleWord: "Eww!",
-          };
-        } else if (roll < 0.5) {
-          return {
-            itemOneName: item1.name,
-            itemTwoName: item2.name,
-            resultName: "Death",
-            resultEmoji: "💀",
-            speechBubbleWord: "Oh no!",
-          };
-        } else {
-          return {
-            itemOneName: item1.name,
-            itemTwoName: item2.name,
-            resultName: "Success",
-            resultEmoji: "🎉",
-            speechBubbleWord: "Yay!",
-          };
+        // Check if items are packable together based on compatibility rules
+        const item1Packable = isPackable(item1.name);
+        const item2Packable = isPackable(item2.name);
+        const item1Category = getCategory(item1.name);
+        const item2Category = getCategory(item2.name);
+
+        // Both items are packable (clothing/shelf-stable food) -> Noop (skip)
+        if (item1Packable && item2Packable) {
+          continue;
         }
-      });
+
+        // Raw meat or fragile perishable with anything -> Death (biological hazard)
+        if (item1Category === "Raw Meat" || item2Category === "Raw Meat" || item1Category === "Fragile Perishable" || item2Category === "Fragile Perishable") {
+          interactions.push({
+            itemOneName: item1.name,
+            itemTwoName: item2.name,
+            speechBubbleWord: "Perished!",
+          });
+          continue;
+        }
+
+        // Regular perishables with packable items -> Poop (contamination)
+        if ((item1Category === "Perishable" && item2Packable) || (item2Category === "Perishable" && item1Packable)) {
+          interactions.push({
+            itemOneName: item1.name,
+            itemTwoName: item2.name,
+            speechBubbleWord: "Contaminated!",
+          });
+          continue;
+        }
+
+        // Two non-packables together -> Poop (spoilage)
+        interactions.push({
+          itemOneName: item1.name,
+          itemTwoName: item2.name,
+          speechBubbleWord: "Spoiled!",
+        });
+      }
 
       return from(interactions).pipe(concatMap((interaction) => of(interaction).pipe(delay(100))));
     })
   );
+}
+
+// Helper functions to check item properties
+function isPackable(itemName: string): boolean {
+  for (const items of Object.values(THEME_MOCK_ITEMS)) {
+    const item = items.find((i) => i.name === itemName);
+    if (item) return item.packable ?? true; // Default items are packable
+  }
+  return true; // Default items are packable
+}
+
+function getCategory(itemName: string): string | undefined {
+  for (const items of Object.values(THEME_MOCK_ITEMS)) {
+    const item = items.find((i) => i.name === itemName);
+    if (item) return item.category;
+  }
+  return undefined;
 }
