@@ -56,7 +56,7 @@ export const boxPackingSystem: System<GameEntity, GameGlobal> = (world, _deltaTi
 
     if (overlap) {
       const effect = {
-        text: "⚠️",
+        text: "Crowded!",
         x: box.transform.x + box.collision.width / 2,
         y: box.transform.y,
         color: "#ff4444",

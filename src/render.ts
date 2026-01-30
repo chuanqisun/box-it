@@ -227,12 +227,6 @@ function drawBox(ctx: CanvasRenderingContext2D, world: GameWorld) {
       const emoji = packed.render?.emoji ?? "📦";
       const pixelArt = emojiToPixelArt(emoji, PACKED_ITEM_SIZE);
       ctx.drawImage(pixelArt, -PACKED_ITEM_SIZE / 2, -PACKED_ITEM_SIZE / 2, PACKED_ITEM_SIZE, PACKED_ITEM_SIZE);
-
-      if (packed.quality?.isBad) {
-        ctx.fillStyle = "rgba(255,0,0,0.8)";
-        ctx.font = "bold 48px Arial";
-        ctx.fillText("❌", 0, 0);
-      }
       ctx.restore();
     });
   ctx.restore();
