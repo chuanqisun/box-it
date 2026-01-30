@@ -130,13 +130,15 @@ export function getObjectEvents(rawEvents$: Observable<TouchEvent>, context: Obj
 }
 
 /**
- * Simple object detection using triangle side matching.
+ * Simple object detection using triangle side matching with smoothing.
  *
  * Algorithm:
  * 1. Generate all 3-point combinations from touch points
  * 2. Calculate sorted side lengths for each combination
  * 3. Find the closest match to each known object's signature
- * 4. Ensure no touch point is used by multiple objects
+ * 4. Prefer matches that share touch IDs with previous frame (track continuity)
+ * 5. Ensure no touch point is used by multiple objects
+ * 6. Apply smoothing to position and orientation
  */
 function detectObjects(touches: TouchPoint[], objectStates: Map<string, TrackedObjectState>): ObjectUpdate[] {
   const updates: ObjectUpdate[] = [];
@@ -155,6 +157,7 @@ function detectObjects(touches: TouchPoint[], objectStates: Map<string, TrackedO
           boundingBox: state.boundingBox,
         });
         state.isActive = false;
+        state.touchIds = undefined;
       }
     }
     return updates;
@@ -173,13 +176,21 @@ function detectObjects(touches: TouchPoint[], objectStates: Map<string, TrackedO
     const state = objectStates.get(match.stateId)!;
     matchedStateIds.add(match.stateId);
 
-    const position = getCentroid(match.points);
-    const rotation = getCanonicalRotation(match.points, state.rotation);
+    const rawPosition = getCentroid(match.points);
+    const rawRotation = getCanonicalRotation(match.points, state.rotation);
     const type = state.isActive ? "move" : "down";
 
+    // Apply smoothing
+    const position = smoothPosition(rawPosition, state.position, state.isActive);
+    const rotation = smoothRotation(rawRotation, state.rotation, state.isActive);
+
+    // Update state
+    state.rawPosition = rawPosition;
     state.position = position;
+    state.rawRotation = rawRotation;
     state.rotation = rotation;
     state.isActive = true;
+    state.touchIds = new Set(match.points.map((p) => p.id));
 
     updates.push({
       id: state.id,
@@ -205,10 +216,53 @@ function detectObjects(touches: TouchPoint[], objectStates: Map<string, TrackedO
         boundingBox: state.boundingBox,
       });
       state.isActive = false;
+      state.touchIds = undefined;
     }
   }
 
   return updates;
+}
+
+/** Linear interpolation */
+function lerp(a: number, b: number, alpha: number): number {
+  return a + (b - a) * alpha;
+}
+
+/** Smooth position using exponential moving average */
+function smoothPosition(
+  rawPos: { x: number; y: number },
+  prevPos: { x: number; y: number } | undefined,
+  wasActive: boolean
+): { x: number; y: number } {
+  if (!prevPos || !wasActive) {
+    return rawPos; // First frame - no smoothing
+  }
+  return {
+    x: lerp(prevPos.x, rawPos.x, TRACKING_CONFIG.positionAlpha),
+    y: lerp(prevPos.y, rawPos.y, TRACKING_CONFIG.positionAlpha),
+  };
+}
+
+/** Smooth rotation with deadband to prevent jitter */
+function smoothRotation(rawRot: number, prevRot: number | undefined, wasActive: boolean): number {
+  if (prevRot === undefined || !wasActive) {
+    return rawRot; // First frame - no smoothing
+  }
+
+  // Calculate angle difference (handling wraparound)
+  let delta = rawRot - prevRot;
+  // Normalize to [-π, π]
+  while (delta > Math.PI) delta -= 2 * Math.PI;
+  while (delta < -Math.PI) delta += 2 * Math.PI;
+
+  // Apply deadband - ignore small changes
+  const deadbandRad = (TRACKING_CONFIG.orientationDeadbandDeg * Math.PI) / 180;
+  if (Math.abs(delta) < deadbandRad) {
+    return prevRot; // Stay at previous rotation
+  }
+
+  // Apply smoothing
+  return normalizeAngle(prevRot + delta * TRACKING_CONFIG.orientationAlpha);
 }
 
 /**
@@ -246,37 +300,60 @@ const MAX_RELATIVE_ERROR = 0.15; // 15% tolerance
 
 /**
  * Find the best non-overlapping matches between combinations and objects.
- * Uses a simple greedy approach: sort all possible matches by error,
- * then pick the best one for each object ensuring no touch reuse.
+ * Uses a greedy approach with track continuity bonus:
+ * 1. Score each candidate by signature error
+ * 2. Boost score for candidates that share touch IDs with existing tracks
+ * 3. Pick best matches ensuring no touch reuse
  */
 function findBestMatches(
   combinations: TouchPoint[][],
   objectStates: Map<string, TrackedObjectState>
 ): Array<{ stateId: string; points: TouchPoint[]; error: number }> {
-  // Build all candidate matches with their errors
+  // Build all candidate matches with their errors and continuity bonus
   const candidates: Array<{
     stateId: string;
     points: TouchPoint[];
     touchIds: Set<number>;
     error: number;
+    sharedTouches: number;
+    score: number;
   }> = [];
 
   for (const [stateId, state] of objectStates) {
     for (const combo of combinations) {
       const error = getRelativeError(combo, state.signature);
-      if (error <= MAX_RELATIVE_ERROR) {
+      if (error <= TRACKING_CONFIG.maxRelativeError) {
+        const comboTouchIds = new Set(combo.map((p) => p.id));
+
+        // Count how many touch IDs are shared with the previous frame
+        let sharedTouches = 0;
+        if (state.touchIds) {
+          for (const id of comboTouchIds) {
+            if (state.touchIds.has(id)) {
+              sharedTouches++;
+            }
+          }
+        }
+
+        // Score: lower is better. Error is primary, shared touches give a bonus.
+        // Sharing all 3 touches gives a 30% bonus (0.7x multiplier)
+        const continuityBonus = 1 - sharedTouches * 0.1;
+        const score = error * continuityBonus;
+
         candidates.push({
           stateId,
           points: combo,
-          touchIds: new Set(combo.map((p) => p.id)),
+          touchIds: comboTouchIds,
           error,
+          sharedTouches,
+          score,
         });
       }
     }
   }
 
-  // Sort by error (best matches first)
-  candidates.sort((a, b) => a.error - b.error);
+  // Sort by score (best matches first)
+  candidates.sort((a, b) => a.score - b.score);
 
   // Greedily select non-overlapping matches
   const result: Array<{ stateId: string; points: TouchPoint[]; error: number }> = [];
