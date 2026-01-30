@@ -107,6 +107,7 @@ export interface WithBoxAnchor {
   boxAnchor: {
     relX: number;
     relY: number;
+    relRotation: number;
   };
 }
 

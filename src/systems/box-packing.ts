@@ -41,6 +41,10 @@ export const boxPackingSystem: System<GameEntity, GameGlobal> = (world, _deltaTi
     const relX = localX + box.collision.width / 2;
     const relY = localY + box.collision.height / 2;
 
+    // Calculate rotation relative to the box (preserve item's visual orientation)
+    const itemRotation = item.transform.rotation || 0;
+    const relRotation = itemRotation - boxRotation;
+
     let overlap = false;
     const safeDistance = ITEM_SIZE * 0.7;
     for (const packed of packedItems) {
@@ -85,11 +89,11 @@ export const boxPackingSystem: System<GameEntity, GameGlobal> = (world, _deltaTi
     playSound("fallIntoBox");
 
     world.addEntity({
-      transform: { x: relX, y: relY, rotation: 0, scale: 0 },
+      transform: { x: relX, y: relY, rotation: relRotation, scale: 0 },
       render: { emoji: item.render?.emoji ?? "📦" },
       name: item.name ? { ...item.name } : { value: item.render?.emoji ?? "📦" },
       collision: { width: ITEM_SIZE, height: ITEM_SIZE, type: "rectangle" },
-      boxAnchor: { relX, relY },
+      boxAnchor: { relX, relY, relRotation },
       itemState: { state: "packed", fallScale: item.itemState.fallScale },
       physical: { size: ITEM_SIZE },
     });
