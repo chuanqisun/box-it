@@ -80,6 +80,9 @@ export const boxPackingSystem: System<GameEntity, GameGlobal> = (world, _deltaTi
               },
             };
           }
+          if (e.score) {
+            return { ...e, score: { ...e.score, value: e.score.value - 100 } };
+          }
           return e;
         })
       );
